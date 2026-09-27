@@ -1,0 +1,28 @@
+# Operating system artefacts
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Build outputs
+dist/
+build/
+tmp/
+out/
+
+# Logs
+*.log
+
+# Coverage
+coverage/

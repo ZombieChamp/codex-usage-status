@@ -1,0 +1,57 @@
+name: Validate Commits
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages
+        run: |
+          PATTERN='^(feat|fix|docs|style|refactor|test|chore|ci|perf|revert)(\(.+\))?!?: .{1,72}$'
+          MERGE_PATTERN='^Merge '
+
+          commits=$(git log --format='%s' origin/${{ github.base_ref }}..HEAD)
+          failed=0
+
+          while IFS= read -r message; do
+            if [[ -z "$message" ]]; then
+              continue
+            fi
+
+            # Skip merge commits
+            if [[ "$message" =~ $MERGE_PATTERN ]]; then
+              continue
+            fi
+
+            if ! [[ "$message" =~ $PATTERN ]]; then
+              echo "INVALID: $message"
+              failed=1
+            fi
+          done <<< "$commits"
+
+          if [[ $failed -eq 1 ]]; then
+            echo ""
+            echo "One or more commit messages do not follow Conventional Commits format."
+            echo "Expected format: <type>(<scope>)!: <subject>"
+            echo "Types: feat, fix, docs, style, refactor, test, chore, ci, perf, revert"
+            echo "Scope is optional. Append '!' before the colon to mark a breaking change."
+            echo "Subject must be 1-72 characters."
+            echo ""
+            echo "Example: feat(auth): add SSO login support"
+            echo "Example: feat(api)!: remove v1 endpoints"
+            exit 1
+          fi
+
+          echo "All commit messages are valid."
