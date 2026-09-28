@@ -6,6 +6,10 @@
 
 A VS Code extension that shows your remaining Codex allowance in the status bar. Hover over it to see reset times and the last successful check, or click it to refresh.
 
+![Codex Usage Status in VS Code, showing remaining allowance and the reset-time tooltip](media/screenshot.png)
+
+Screenshot with sample allowance values.
+
 The extension reads account rate limits through a local `codex app-server` process. It displays the allowance windows returned for your account, including separate limit names when more than one is available.
 
 ## Prerequisites
