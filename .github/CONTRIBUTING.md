@@ -1,17 +1,15 @@
 # Contributing
 
-Thank you for considering a contribution to this project. This document describes the conventions and workflows we follow. The README's Contributing section provides a brief overview; this file is the detailed reference.
+This guide covers development, testing, and pull requests for Codex Usage Status.
 
-## Issue-First Process
+## Discuss a change
 
-Before submitting a pull request, please open a GitHub issue to discuss the proposed change. This gives maintainers and other contributors the opportunity to provide early feedback, align on direction, and avoid duplicated effort.
+Open a GitHub issue to discuss the proposed change before submitting a pull request. Check existing issues and pull requests for related work first.
 
 - Bug reports should use the **Bug Report** issue template.
 - Feature proposals should use the **Feature Request** issue template.
 
-Opening an issue first ensures that time spent writing code is not wasted on changes that may not be accepted or that overlap with ongoing work.
-
-## Branching Strategy
+## Branching
 
 All feature branches are created from `main`. Branch names follow the convention `<type>/<short-description>`, where:
 
@@ -21,43 +19,45 @@ All feature branches are created from `main`. Branch names follow the convention
 Examples:
 
 ```
-feat/sso-login
-fix/null-pointer
+feat/usage-tooltip
+fix/stale-allowance
 docs/contributing-guide
 ```
 
-## Commit Conventions
+## Commit conventions
 
 All commits follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. The format is:
 
 ```
-<type>(<scope>): <subject>
+<type>(<scope>)!: <subject>
 ```
 
-The scope is optional. The permitted types are: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `perf`, `revert`.
+The scope and breaking-change marker `!` are optional. The permitted types are: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `perf`, `revert`.
 
-The subject line must be written in imperative mood (e.g., "add" not "added"), must be under 72 characters, and must not end with a full stop.
+Write the subject in the imperative mood, such as "add" rather than "added", without a final full stop. The subject after `: ` must contain 1 to 72 characters.
 
-To mark a breaking change, append `!` after the type or scope (e.g., `feat(api)!: remove v1 endpoints`) and include a `BREAKING CHANGE:` footer in the body.
+To mark a breaking change, append `!` after the type or scope and include a `BREAKING CHANGE:` footer in the body.
 
 Examples:
 
 ```
-feat(auth): add SSO login support
-fix: resolve null pointer in user lookup
-docs: update contributing guide formatting
-feat(api)!: remove v1 endpoints
+feat(usage): show allowance reset times
+fix: keep previous values after a failed refresh
+docs: update contributing guide
+feat(settings)!: rename the refresh interval setting
 ```
 
-A commit validation workflow enforces this format on push. If your commit messages do not conform, the workflow will fail and the push will be rejected.
+The [commit validation workflow](workflows/commit-validation.yml) runs on pull requests targeting `main`. It checks commit subjects for the permitted type, optional scope and `!`, and subject length. It skips subjects beginning with `Merge `. Invalid messages fail the workflow check; the workflow does not reject pushes.
 
-## Pull Request Process
+## Pull requests
 
-When opening a pull request, use the [pull request template](pull_request_template.md) and fill in all sections. Request a review from the designated [CODEOWNERS](CODEOWNERS).
+Target `main`, link the issue, and use the [pull request template](pull_request_template.md). Describe what changed, why, and how you tested it. Include the optional approach section when it helps explain the change. Request a review from the designated [CODEOWNERS](CODEOWNERS).
+
+Run `npm test` before submitting code changes. For interface changes, describe your checks in the Extension Development Host and include screenshots when useful. Update the README when commands, settings, or user-visible behaviour change. The current GitHub Actions workflow validates commit messages only; it does not run the tests or build the VSIX.
 
 Pull requests are squash-merged into `main`. The squashed commit message must follow the Conventional Commits format described above, summarising the overall change concisely.
 
-## Code Style
+## Code style
 
 Use British English for documentation, interface text, comments, and test descriptions. Preserve required API names, identifiers, external titles, and verbatim licence text.
 
@@ -73,15 +73,66 @@ Python files use 4 spaces as per the [PEP 8](https://peps.python.org/pep-0008/#i
 
 Markdown files are exempt from trailing whitespace trimming, as trailing spaces can be semantically meaningful in Markdown.
 
-## Local Development
+## Local development
 
-> *This section is a placeholder. Template adopters should replace it with project-specific setup instructions, including dependencies, build commands, and how to run the test suite.*
+### Prerequisites
 
-## Security Reporting
+- VS Code 1.85.0 or later to run the extension.
+- Node.js with support for `node --test`, and npm to run the package scripts.
+- Python 3, available as `python3`, to build a VSIX.
+
+Clone your fork and create a branch from `main` using the naming convention above. Run the commands below from the repository root.
+
+### Run the extension
+
+1. Open the repository in VS Code.
+2. Select **Run Codex Usage Status** in Run and Debug, then press **F5**.
+3. Check the status bar in the Extension Development Host window.
+
+For live usage checks, you need a Codex executable and a ChatGPT account signed in to Codex with allowance data available. See the [README prerequisites](../README.md#prerequisites) and [settings](../README.md#settings) for executable discovery and configuration.
+
+After changing source files, restart the debugging session to load the changes. Check the status bar text, tooltip, and **Codex Usage: Refresh** command when changing usage display behaviour. Check that settings changes take effect when changing configuration handling.
+
+### Run tests
+
+```sh
+npm test
+```
+
+The tests use Node.js's built-in test runner. Client tests launch a local fake server, so the test suite does not need Codex, a signed-in account, or VS Code.
+
+To run one test file:
+
+```sh
+node --test test/client.test.js
+```
+
+Add regression coverage for changes to client behaviour or allowance parsing in the corresponding file under `test/`.
+
+### Build and check a VSIX
+
+```sh
+npm run package
+```
+
+The command writes `dist/codex-usage-status-<version>.vsix`, with the version from `package.json`. Git ignores `dist/`.
+
+To check the package, run **Extensions: Install from VSIX...** in VS Code and select the generated file. Check that the extension loads and displays usage. Record any manual checks you could not complete in the pull request.
+
+### Repository layout
+
+- `src/extension.js` handles VS Code activation, commands, settings, and the status bar.
+- `src/client.js` manages the local app-server process and protocol requests.
+- `src/usage.js` converts allowance data into display windows.
+- `test/client.test.js` and `test/usage.test.js` cover the client and allowance parsing.
+- `scripts/package.py` builds the VSIX from an explicit file list. Update that list if you add files the extension needs at runtime.
+- `package.json` declares commands, settings, extension metadata, and development scripts.
+
+## Security reporting
 
 Security vulnerabilities must not be reported via public GitHub issues. Please follow the process described in [SECURITY.md](SECURITY.md) for responsible disclosure.
 
-## Code of Conduct
+## Code of conduct
 
 All participants in this project are expected to abide by the [Code of Conduct](CODE_OF_CONDUCT.md). Please read it before contributing.
 
