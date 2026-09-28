@@ -10,15 +10,15 @@ We pledge to act and interact in ways that contribute to an open, welcoming, div
 
 Examples of behaviour that contributes to a positive environment for our community include:
 
-* Demonstrating empathy and kindness toward other people
+* Demonstrating empathy and kindness towards other people
 * Being respectful of differing opinions, viewpoints, and experiences
 * Giving and gracefully accepting constructive feedback
-* Accepting responsibility and apologizing to those affected by our mistakes, and learning from the experience
+* Accepting responsibility and apologising to those affected by our mistakes, and learning from the experience
 * Focusing on what is best not just for us as individuals, but for the overall community
 
 Examples of unacceptable behaviour include:
 
-* The use of sexualized language or imagery, and sexual attention or advances of any kind
+* The use of sexualised language or imagery, and sexual attention or advances of any kind
 * Trolling, insulting or derogatory comments, and personal or political attacks
 * Public or private harassment
 * Publishing others' private information, such as a physical or email address, without their explicit permission
@@ -38,7 +38,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 Instances of abusive, harassing, or otherwise unacceptable behaviour may be reported to the community leaders responsible for enforcement at matthewmawson@gmail.com. All complaints will be reviewed and investigated promptly and fairly.
 
-All community leaders are obligated to respect the privacy and security of the reporter of any incident.
+All community leaders are obliged to respect the privacy and security of the reporter of any incident.
 
 ## Enforcement Guidelines
 
@@ -64,7 +64,7 @@ Community leaders will follow these Community Impact Guidelines in determining t
 
 ### 4. Permanent Ban
 
-**Community Impact**: Demonstrating a pattern of violation of community standards, including sustained inappropriate behaviour, harassment of an individual, or aggression toward or disparagement of classes of individuals.
+**Community Impact**: Demonstrating a pattern of violation of community standards, including sustained inappropriate behaviour, harassment of an individual, or aggression towards or disparagement of classes of individuals.
 
 **Consequence**: A permanent ban from any sort of public interaction within the community.
 

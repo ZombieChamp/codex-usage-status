@@ -59,9 +59,11 @@ Pull requests are squash-merged into `main`. The squashed commit message must fo
 
 ## Code Style
 
+Use British English for documentation, interface text, comments, and test descriptions. Preserve required API names, identifiers, external titles, and verbatim licence text.
+
 This repository uses [.editorconfig](../.editorconfig) to define formatting rules. Please ensure your editor respects these settings. The baseline rules are:
 
-- 2-space indentation
+- 2-space indentation, except Python files, which use 4 spaces
 - UTF-8 encoding
 - LF line endings
 - Insert final newline
@@ -83,6 +85,6 @@ All participants in this project are expected to abide by the [Code of Conduct](
 
 ## Licence
 
-Contributions to this project are submitted under the GNU General Public Licence v3.0. By submitting a pull request, you agree to these licence terms.
+Contributions to this project are submitted under the GNU General Public License v3.0. By submitting a pull request, you agree to these licence terms.
 
 See the [LICENCE](../LICENCE) file for the full text.
