@@ -63,11 +63,13 @@ Use British English for documentation, interface text, comments, and test descri
 
 This repository uses [.editorconfig](../.editorconfig) to define formatting rules. Please ensure your editor respects these settings. The baseline rules are:
 
-- 2-space indentation, except Python files, which use 4 spaces
+- 2-space indentation
 - UTF-8 encoding
 - LF line endings
 - Insert final newline
 - Trim trailing whitespace
+
+Python files use 4 spaces as per the [PEP 8](https://peps.python.org/pep-0008/#indentation) official style guide.
 
 Markdown files are exempt from trailing whitespace trimming, as trailing spaces can be semantically meaningful in Markdown.
 
