@@ -1,6 +1,36 @@
 const { spawn } = require('node:child_process');
 const { createInterface } = require('node:readline');
 const { homedir } = require('node:os');
+const { version } = require('../package.json');
+
+// Ignore malformed lines. Pending requests wait for a valid reply or their timeout.
+function parseMessage(line) {
+  let message;
+  try {
+    message = JSON.parse(line);
+  } catch {
+    return;
+  }
+  if (message === null || typeof message !== 'object' || Array.isArray(message)) return;
+
+  const validId = typeof message.id === 'string' || Number.isFinite(message.id);
+  const hasResult = Object.hasOwn(message, 'result');
+  const hasError = Object.hasOwn(message, 'error');
+  if (Object.hasOwn(message, 'method')) {
+    if (
+      typeof message.method !== 'string' || !message.method ||
+      (message.id !== undefined && !validId) || hasResult || hasError
+    ) return;
+  } else {
+    if (!validId || hasResult === hasError) return;
+    if (hasError && (
+      message.error === null || typeof message.error !== 'object' ||
+      Array.isArray(message.error) || !Number.isInteger(message.error.code) ||
+      typeof message.error.message !== 'string'
+    )) return;
+  }
+  return message;
+}
 
 class CodexClient {
   constructor(executable, {
@@ -19,12 +49,8 @@ class CodexClient {
     });
     this.lines = createInterface({ input: this.proc.stdout });
     this.lines.on('line', line => {
-      let message;
-      try {
-        message = JSON.parse(line);
-      } catch {
-        return;
-      }
+      const message = parseMessage(line);
+      if (!message) return;
 
       if (message.method) {
         if (message.id !== undefined) {
@@ -54,7 +80,9 @@ class CodexClient {
   }
 
   send(message) {
-    if (!this.closed) this.proc.stdin.write(JSON.stringify(message) + '\n');
+    // A failed spawn has no PID. Writing to its stdin can raise SIGPIPE.
+    if (this.closed || this.proc.pid === undefined) return;
+    this.proc.stdin.write(JSON.stringify(message) + '\n');
   }
 
   request(method, params = {}) {
@@ -75,7 +103,7 @@ class CodexClient {
       clientInfo: {
         name: 'codex_usage_status',
         title: 'Codex Usage Status',
-        version: '0.1.0'
+        version
       }
     });
     this.send({ method: 'initialized', params: {} });

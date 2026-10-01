@@ -3,31 +3,789 @@
   "displayName": "Codex Usage Status",
   "icon": "media/icon.png",
   "description": "Show remaining Codex allowance and reset times in the status bar.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "ZombieChamp",
   "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
     "url": "https://github.com/ZombieChamp/codex-usage-status.git"
   },
-  "engines": { "vscode": "^1.85.0" },
-  "categories": ["Other"],
-  "extensionKind": ["ui"],
-  "activationEvents": ["onStartupFinished"],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./src/extension.js",
-  "scripts": { "test": "node --test", "package": "python3 scripts/package.py" },
-  "capabilities": { "untrustedWorkspaces": { "supported": true }, "virtualWorkspaces": true },
+  "scripts": {
+    "test": "node --test",
+    "package": "python3 scripts/package.py"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": true
+  },
   "contributes": {
     "commands": [
-      { "command": "codexUsage.refresh", "title": "Codex Usage: Refresh" },
-      { "command": "codexUsage.openDashboard", "title": "Codex Usage: Open Usage Dashboard" }
+      {
+        "command": "codexUsage.refresh",
+        "title": "Codex Usage: Refresh"
+      },
+      {
+        "command": "codexUsage.openDashboard",
+        "title": "Codex Usage: Open Usage Dashboard"
+      }
     ],
     "configuration": {
       "title": "Codex Usage",
       "properties": {
-        "codexUsage.executablePath": { "type": "string", "default": "", "scope": "application", "description": "Absolute path to Codex. When empty, use the installed OpenAI extension's executable or codex on PATH." },
-        "codexUsage.refreshIntervalSeconds": { "type": "number", "default": 60, "minimum": 30, "maximum": 3600, "scope": "application", "description": "Seconds between usage checks." },
-        "codexUsage.warningThresholdPercent": { "type": "number", "default": 20, "minimum": 0, "maximum": 100, "scope": "application", "description": "Highlight the status bar when remaining allowance reaches this percentage." }
+        "codexUsage.executablePath": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "description": "Absolute path to Codex. When empty, use the installed OpenAI extension's executable or codex on PATH."
+        },
+        "codexUsage.refreshIntervalSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 30,
+          "maximum": 3600,
+          "scope": "application",
+          "description": "Seconds between usage checks."
+        },
+        "codexUsage.warningThresholdPercent": {
+          "type": "number",
+          "default": 66,
+          "minimum": 0,
+          "maximum": 100,
+          "scope": "application",
+          "description": "Colour an allowance yellow at this percentage remaining or less. The critical threshold takes precedence."
+        },
+        "codexUsage.criticalThresholdPercent": {
+          "type": "number",
+          "default": 33,
+          "minimum": 0,
+          "maximum": 100,
+          "scope": "application",
+          "description": "Colour an allowance red at this percentage remaining or less. Takes precedence over the warning threshold."
+        }
+      }
+    },
+    "icons": {
+      "codex-usage-gauge-0": {
+        "description": "Codex allowance gauge, 0% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E000"
+        }
+      },
+      "codex-usage-gauge-1": {
+        "description": "Codex allowance gauge, 1% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E001"
+        }
+      },
+      "codex-usage-gauge-2": {
+        "description": "Codex allowance gauge, 2% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E002"
+        }
+      },
+      "codex-usage-gauge-3": {
+        "description": "Codex allowance gauge, 3% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E003"
+        }
+      },
+      "codex-usage-gauge-4": {
+        "description": "Codex allowance gauge, 4% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E004"
+        }
+      },
+      "codex-usage-gauge-5": {
+        "description": "Codex allowance gauge, 5% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E005"
+        }
+      },
+      "codex-usage-gauge-6": {
+        "description": "Codex allowance gauge, 6% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E006"
+        }
+      },
+      "codex-usage-gauge-7": {
+        "description": "Codex allowance gauge, 7% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E007"
+        }
+      },
+      "codex-usage-gauge-8": {
+        "description": "Codex allowance gauge, 8% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E008"
+        }
+      },
+      "codex-usage-gauge-9": {
+        "description": "Codex allowance gauge, 9% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E009"
+        }
+      },
+      "codex-usage-gauge-10": {
+        "description": "Codex allowance gauge, 10% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E00A"
+        }
+      },
+      "codex-usage-gauge-11": {
+        "description": "Codex allowance gauge, 11% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E00B"
+        }
+      },
+      "codex-usage-gauge-12": {
+        "description": "Codex allowance gauge, 12% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E00C"
+        }
+      },
+      "codex-usage-gauge-13": {
+        "description": "Codex allowance gauge, 13% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E00D"
+        }
+      },
+      "codex-usage-gauge-14": {
+        "description": "Codex allowance gauge, 14% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E00E"
+        }
+      },
+      "codex-usage-gauge-15": {
+        "description": "Codex allowance gauge, 15% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E00F"
+        }
+      },
+      "codex-usage-gauge-16": {
+        "description": "Codex allowance gauge, 16% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E010"
+        }
+      },
+      "codex-usage-gauge-17": {
+        "description": "Codex allowance gauge, 17% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E011"
+        }
+      },
+      "codex-usage-gauge-18": {
+        "description": "Codex allowance gauge, 18% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E012"
+        }
+      },
+      "codex-usage-gauge-19": {
+        "description": "Codex allowance gauge, 19% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E013"
+        }
+      },
+      "codex-usage-gauge-20": {
+        "description": "Codex allowance gauge, 20% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E014"
+        }
+      },
+      "codex-usage-gauge-21": {
+        "description": "Codex allowance gauge, 21% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E015"
+        }
+      },
+      "codex-usage-gauge-22": {
+        "description": "Codex allowance gauge, 22% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E016"
+        }
+      },
+      "codex-usage-gauge-23": {
+        "description": "Codex allowance gauge, 23% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E017"
+        }
+      },
+      "codex-usage-gauge-24": {
+        "description": "Codex allowance gauge, 24% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E018"
+        }
+      },
+      "codex-usage-gauge-25": {
+        "description": "Codex allowance gauge, 25% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E019"
+        }
+      },
+      "codex-usage-gauge-26": {
+        "description": "Codex allowance gauge, 26% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E01A"
+        }
+      },
+      "codex-usage-gauge-27": {
+        "description": "Codex allowance gauge, 27% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E01B"
+        }
+      },
+      "codex-usage-gauge-28": {
+        "description": "Codex allowance gauge, 28% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E01C"
+        }
+      },
+      "codex-usage-gauge-29": {
+        "description": "Codex allowance gauge, 29% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E01D"
+        }
+      },
+      "codex-usage-gauge-30": {
+        "description": "Codex allowance gauge, 30% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E01E"
+        }
+      },
+      "codex-usage-gauge-31": {
+        "description": "Codex allowance gauge, 31% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E01F"
+        }
+      },
+      "codex-usage-gauge-32": {
+        "description": "Codex allowance gauge, 32% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E020"
+        }
+      },
+      "codex-usage-gauge-33": {
+        "description": "Codex allowance gauge, 33% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E021"
+        }
+      },
+      "codex-usage-gauge-34": {
+        "description": "Codex allowance gauge, 34% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E022"
+        }
+      },
+      "codex-usage-gauge-35": {
+        "description": "Codex allowance gauge, 35% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E023"
+        }
+      },
+      "codex-usage-gauge-36": {
+        "description": "Codex allowance gauge, 36% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E024"
+        }
+      },
+      "codex-usage-gauge-37": {
+        "description": "Codex allowance gauge, 37% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E025"
+        }
+      },
+      "codex-usage-gauge-38": {
+        "description": "Codex allowance gauge, 38% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E026"
+        }
+      },
+      "codex-usage-gauge-39": {
+        "description": "Codex allowance gauge, 39% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E027"
+        }
+      },
+      "codex-usage-gauge-40": {
+        "description": "Codex allowance gauge, 40% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E028"
+        }
+      },
+      "codex-usage-gauge-41": {
+        "description": "Codex allowance gauge, 41% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E029"
+        }
+      },
+      "codex-usage-gauge-42": {
+        "description": "Codex allowance gauge, 42% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E02A"
+        }
+      },
+      "codex-usage-gauge-43": {
+        "description": "Codex allowance gauge, 43% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E02B"
+        }
+      },
+      "codex-usage-gauge-44": {
+        "description": "Codex allowance gauge, 44% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E02C"
+        }
+      },
+      "codex-usage-gauge-45": {
+        "description": "Codex allowance gauge, 45% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E02D"
+        }
+      },
+      "codex-usage-gauge-46": {
+        "description": "Codex allowance gauge, 46% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E02E"
+        }
+      },
+      "codex-usage-gauge-47": {
+        "description": "Codex allowance gauge, 47% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E02F"
+        }
+      },
+      "codex-usage-gauge-48": {
+        "description": "Codex allowance gauge, 48% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E030"
+        }
+      },
+      "codex-usage-gauge-49": {
+        "description": "Codex allowance gauge, 49% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E031"
+        }
+      },
+      "codex-usage-gauge-50": {
+        "description": "Codex allowance gauge, 50% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E032"
+        }
+      },
+      "codex-usage-gauge-51": {
+        "description": "Codex allowance gauge, 51% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E033"
+        }
+      },
+      "codex-usage-gauge-52": {
+        "description": "Codex allowance gauge, 52% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E034"
+        }
+      },
+      "codex-usage-gauge-53": {
+        "description": "Codex allowance gauge, 53% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E035"
+        }
+      },
+      "codex-usage-gauge-54": {
+        "description": "Codex allowance gauge, 54% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E036"
+        }
+      },
+      "codex-usage-gauge-55": {
+        "description": "Codex allowance gauge, 55% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E037"
+        }
+      },
+      "codex-usage-gauge-56": {
+        "description": "Codex allowance gauge, 56% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E038"
+        }
+      },
+      "codex-usage-gauge-57": {
+        "description": "Codex allowance gauge, 57% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E039"
+        }
+      },
+      "codex-usage-gauge-58": {
+        "description": "Codex allowance gauge, 58% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E03A"
+        }
+      },
+      "codex-usage-gauge-59": {
+        "description": "Codex allowance gauge, 59% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E03B"
+        }
+      },
+      "codex-usage-gauge-60": {
+        "description": "Codex allowance gauge, 60% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E03C"
+        }
+      },
+      "codex-usage-gauge-61": {
+        "description": "Codex allowance gauge, 61% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E03D"
+        }
+      },
+      "codex-usage-gauge-62": {
+        "description": "Codex allowance gauge, 62% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E03E"
+        }
+      },
+      "codex-usage-gauge-63": {
+        "description": "Codex allowance gauge, 63% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E03F"
+        }
+      },
+      "codex-usage-gauge-64": {
+        "description": "Codex allowance gauge, 64% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E040"
+        }
+      },
+      "codex-usage-gauge-65": {
+        "description": "Codex allowance gauge, 65% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E041"
+        }
+      },
+      "codex-usage-gauge-66": {
+        "description": "Codex allowance gauge, 66% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E042"
+        }
+      },
+      "codex-usage-gauge-67": {
+        "description": "Codex allowance gauge, 67% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E043"
+        }
+      },
+      "codex-usage-gauge-68": {
+        "description": "Codex allowance gauge, 68% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E044"
+        }
+      },
+      "codex-usage-gauge-69": {
+        "description": "Codex allowance gauge, 69% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E045"
+        }
+      },
+      "codex-usage-gauge-70": {
+        "description": "Codex allowance gauge, 70% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E046"
+        }
+      },
+      "codex-usage-gauge-71": {
+        "description": "Codex allowance gauge, 71% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E047"
+        }
+      },
+      "codex-usage-gauge-72": {
+        "description": "Codex allowance gauge, 72% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E048"
+        }
+      },
+      "codex-usage-gauge-73": {
+        "description": "Codex allowance gauge, 73% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E049"
+        }
+      },
+      "codex-usage-gauge-74": {
+        "description": "Codex allowance gauge, 74% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E04A"
+        }
+      },
+      "codex-usage-gauge-75": {
+        "description": "Codex allowance gauge, 75% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E04B"
+        }
+      },
+      "codex-usage-gauge-76": {
+        "description": "Codex allowance gauge, 76% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E04C"
+        }
+      },
+      "codex-usage-gauge-77": {
+        "description": "Codex allowance gauge, 77% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E04D"
+        }
+      },
+      "codex-usage-gauge-78": {
+        "description": "Codex allowance gauge, 78% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E04E"
+        }
+      },
+      "codex-usage-gauge-79": {
+        "description": "Codex allowance gauge, 79% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E04F"
+        }
+      },
+      "codex-usage-gauge-80": {
+        "description": "Codex allowance gauge, 80% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E050"
+        }
+      },
+      "codex-usage-gauge-81": {
+        "description": "Codex allowance gauge, 81% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E051"
+        }
+      },
+      "codex-usage-gauge-82": {
+        "description": "Codex allowance gauge, 82% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E052"
+        }
+      },
+      "codex-usage-gauge-83": {
+        "description": "Codex allowance gauge, 83% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E053"
+        }
+      },
+      "codex-usage-gauge-84": {
+        "description": "Codex allowance gauge, 84% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E054"
+        }
+      },
+      "codex-usage-gauge-85": {
+        "description": "Codex allowance gauge, 85% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E055"
+        }
+      },
+      "codex-usage-gauge-86": {
+        "description": "Codex allowance gauge, 86% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E056"
+        }
+      },
+      "codex-usage-gauge-87": {
+        "description": "Codex allowance gauge, 87% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E057"
+        }
+      },
+      "codex-usage-gauge-88": {
+        "description": "Codex allowance gauge, 88% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E058"
+        }
+      },
+      "codex-usage-gauge-89": {
+        "description": "Codex allowance gauge, 89% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E059"
+        }
+      },
+      "codex-usage-gauge-90": {
+        "description": "Codex allowance gauge, 90% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E05A"
+        }
+      },
+      "codex-usage-gauge-91": {
+        "description": "Codex allowance gauge, 91% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E05B"
+        }
+      },
+      "codex-usage-gauge-92": {
+        "description": "Codex allowance gauge, 92% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E05C"
+        }
+      },
+      "codex-usage-gauge-93": {
+        "description": "Codex allowance gauge, 93% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E05D"
+        }
+      },
+      "codex-usage-gauge-94": {
+        "description": "Codex allowance gauge, 94% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E05E"
+        }
+      },
+      "codex-usage-gauge-95": {
+        "description": "Codex allowance gauge, 95% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E05F"
+        }
+      },
+      "codex-usage-gauge-96": {
+        "description": "Codex allowance gauge, 96% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E060"
+        }
+      },
+      "codex-usage-gauge-97": {
+        "description": "Codex allowance gauge, 97% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E061"
+        }
+      },
+      "codex-usage-gauge-98": {
+        "description": "Codex allowance gauge, 98% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E062"
+        }
+      },
+      "codex-usage-gauge-99": {
+        "description": "Codex allowance gauge, 99% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E063"
+        }
+      },
+      "codex-usage-gauge-100": {
+        "description": "Codex allowance gauge, 100% remaining.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E064"
+        }
       }
     }
   }

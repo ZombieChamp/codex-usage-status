@@ -51,8 +51,81 @@ test('times out hung requests and rejects requests when the server exits', async
   assert.equal(client.pending.size, 0);
 });
 
-test('missing executable rejects without an unhandled process error', async t => {
+test('missing executable rejects without an unhandled process error or pipe signal', async t => {
+  let pipeSignals = 0;
+  if (process.platform !== 'win32') {
+    const onSigpipe = () => pipeSignals++;
+    process.on('SIGPIPE', onSigpipe);
+    t.after(() => process.off('SIGPIPE', onSigpipe));
+  }
   const client = new CodexClient('/nonexistent/codex-usage-test');
+  const closed = new Promise(resolve => client.proc.once('close', resolve));
   t.after(() => client.dispose());
   await assert.rejects(client.initialize(), /ENOENT/);
+  await closed;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(pipeSignals, 0);
+});
+
+test('ignores malformed envelopes until a valid reply arrives, including a null result', async t => {
+  const malformedServer = `
+const rl = require('node:readline').createInterface({ input: process.stdin });
+rl.on('line', line => {
+  const request = JSON.parse(line);
+  if (typeof request.method !== 'string') return;
+  const id = request.id;
+  const invalid = [
+    null, true, 42, 'text', [], [{ id, result: 'invalid' }], {}, { id },
+    { id, method: null, result: 'invalid' },
+    { id, method: 42, result: 'invalid' },
+    { id, method: '', result: 'invalid' },
+    { id, result: 'invalid', error: { code: -1, message: 'Invalid' } },
+    { id, error: null },
+    { id, error: 'invalid' },
+    { id, error: [] },
+    { id, error: {} },
+    { id, error: { code: -1, message: 42 } },
+    { id, error: { code: 'invalid', message: 'Invalid' } }
+  ];
+  process.stdout.write('{not JSON}\\n');
+  for (const message of invalid) process.stdout.write(JSON.stringify(message) + '\\n');
+  process.stdout.write(JSON.stringify({ id, result: null }) + '\\n');
+});`;
+  const client = new CodexClient(process.execPath, {
+    args: ['-e', malformedServer], timeout: 1000
+  });
+  t.after(() => client.dispose());
+
+  assert.equal(await client.request('read'), null);
+  assert.equal(client.pending.size, 0);
+  assert.equal(client.closed, false);
+});
+
+test('handles notifications and rejects unsupported server requests', async t => {
+  const eventServer = `
+const rl = require('node:readline').createInterface({ input: process.stdin });
+let requestId;
+rl.on('line', line => {
+  const message = JSON.parse(line);
+  if (message.method === 'events') {
+    requestId = message.id;
+    process.stdout.write(JSON.stringify({
+      method: 'account/rateLimits/updated',
+      params: { rateLimits: { primary: { usedPercent: 25 } } }
+    }) + '\\n');
+    process.stdout.write(JSON.stringify({ id: 'server-request', method: 'unsupported' }) + '\\n');
+  } else if (message.id === 'server-request') {
+    process.stdout.write(JSON.stringify({ id: requestId, result: message.error }) + '\\n');
+  }
+});`;
+  const updates = [];
+  const client = new CodexClient(process.execPath, {
+    args: ['-e', eventServer], timeout: 1000,
+    onUpdate: update => updates.push(update)
+  });
+  t.after(() => client.dispose());
+
+  const result = await client.request('events');
+  assert.equal(result.code, -32601);
+  assert.deepEqual(updates, [{ rateLimits: { primary: { usedPercent: 25 } } }]);
 });

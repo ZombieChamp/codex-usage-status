@@ -19,6 +19,7 @@ function windows(result) {
       const window = bucket?.[key];
       if (!window || !Number.isFinite(window.usedPercent)) return [];
       return [{
+        id: `${id}.${key}`,
         label: `${entries.length > 1 ? `${bucket.limitName || id} ` : ''}${duration(window.windowDurationMins)}`,
         remaining: Math.max(0, Math.min(100, 100 - window.usedPercent)),
         resetsAt: Number.isFinite(window.resetsAt) ? window.resetsAt * 1000 : null
@@ -27,4 +28,9 @@ function windows(result) {
   );
 }
 
-module.exports = { windows, duration };
+function gauge(remaining) {
+  const percent = Math.round(Math.max(0, Math.min(100, remaining)));
+  return `$(codex-usage-gauge-${percent})`;
+}
+
+module.exports = { windows, duration, gauge };

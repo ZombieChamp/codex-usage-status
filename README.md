@@ -6,11 +6,11 @@
 
 A VS Code extension that shows your remaining Codex allowance in the status bar. Hover over it to see reset times and the last successful check, or click it to refresh.
 
-![Codex Usage Status in VS Code, showing remaining allowance and the reset-time tooltip](media/screenshot.png)
-
-Screenshot with sample allowance values.
-
 The extension reads account rate limits through a local `codex app-server` process. It displays the allowance windows returned for your account, including separate limit names when more than one is available.
+
+<img src="media/screenshot.png" alt="Codex status bar showing a green five-hour gauge at 80% and a yellow weekly gauge at 65%, with the reset-time tooltip open" width="550">
+
+Captured in VS Code with sample usage data and the default warning and critical thresholds.
 
 ## Prerequisites
 
@@ -26,18 +26,14 @@ The extension starts after VS Code finishes loading and checks usage immediately
 
 ## Usage
 
-The status bar shows the percentage remaining for each allowance window. For example, an account with five-hour and weekly windows might show:
+Each allowance window appears as a circular gauge with its exact percentage remaining. The gauge rounds fractional percentages to the nearest whole percentage. Each allowance's gauge and text change colour independently, using your theme's green, yellow and red terminal colours.
 
-```text
-Codex: 5h 80% · Weekly 65% remaining
-```
-
-The tooltip shows reset times and the last successful check in your local time zone, using your system's default date and time format.
+The tooltip on each item shows reset times and the last successful check in your local time zone, using your system's default date and time format.
 
 - Click the status bar item or run **Codex Usage: Refresh** to check again.
 - Run **Codex Usage: Open Usage Dashboard**, or use the tooltip link, to open the account usage page.
-- The item gets a warning background when any window reaches the configured remaining-allowance threshold.
-- Previous values stay visible with a `stale` label if a refresh fails, more than two refresh intervals have elapsed since the last success, or a reported reset time has passed.
+- Each allowance is red at or below the configured critical threshold, yellow at or below the warning threshold, and green otherwise. The warning threshold defaults to 66%. The critical threshold defaults to 33% and takes precedence over the warning threshold.
+- Each allowance keeps its previous value and shows a `stale` label if a refresh fails, more than two refresh intervals have elapsed since the last success, or a reported reset time has passed.
 
 ## Settings
 
@@ -47,9 +43,10 @@ Search for `Codex Usage` in VS Code Settings, or edit these values in your user 
 | --- | --- | --- |
 | `codexUsage.executablePath` | `""` | Absolute path to the Codex executable. When empty, the extension checks the installed OpenAI extension's bundled executable, then tries `codex` on `PATH`. |
 | `codexUsage.refreshIntervalSeconds` | `60` | Seconds between checks. The setting accepts 30 to 3600. |
-| `codexUsage.warningThresholdPercent` | `20` | Highlight the status bar when any window has this percentage remaining or less. Accepts 0 to 100. |
+| `codexUsage.warningThresholdPercent` | `66` | Colour an allowance yellow at this percentage remaining or less. Accepts 0 to 100. The critical threshold takes precedence. |
+| `codexUsage.criticalThresholdPercent` | `33` | Colour an allowance red at this percentage remaining or less. Accepts 0 to 100. Takes precedence over the warning threshold. |
 
-Changing a setting restarts the connection and triggers a new check.
+Changing a colour threshold updates the displayed allowances immediately. Changing the refresh interval reschedules checks and keeps the connection and last successful reading. Changing the executable path restarts the connection and checks usage again.
 
 ## Troubleshooting
 
@@ -69,7 +66,7 @@ Use Node.js with support for `node --test` to run the tests, and Python 3 to bui
 2. Press **F5** with the **Run Codex Usage Status** launch configuration selected.
 3. Check the status bar in the Extension Development Host window.
 
-Run the client and usage-formatting tests with:
+Run the client, usage and status bar tests with:
 
 ```sh
 npm test
@@ -82,6 +79,8 @@ npm run package
 ```
 
 It writes `dist/codex-usage-status-<version>.vsix` using the version in `package.json`.
+
+The gauge font in `media/gauges.woff` contains 101 icons, one for each whole percentage from 0% to 100%. To change the gauge shapes, install the Python `fonttools` package in a virtual environment and run `python scripts/generate_gauges.py`. This regenerates the font and its icon declarations in `package.json`. Normal packaging does not require FontTools.
 
 ## Contributing
 

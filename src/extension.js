@@ -2,7 +2,13 @@ const vscode = require('vscode');
 const path = require('node:path');
 const fs = require('node:fs');
 const { CodexClient } = require('./client');
-const { windows } = require('./usage');
+const { windows, gauge } = require('./usage');
+
+function allowanceColour(remaining, criticalThreshold, warningThreshold) {
+  if (remaining <= criticalThreshold) return 'terminal.ansiRed';
+  if (remaining <= warningThreshold) return 'terminal.ansiYellow';
+  return 'terminal.ansiGreen';
+}
 
 function executable() {
   const configured = vscode.workspace
@@ -34,6 +40,7 @@ function activate(context) {
   const item = vscode.window.createStatusBarItem('codexUsage', vscode.StatusBarAlignment.Right, 100);
   item.name = 'Codex remaining allowance';
   item.command = 'codexUsage.refresh';
+  const allowanceItems = new Map();
   let client;
   let timer;
   let busy = false;
@@ -42,31 +49,50 @@ function activate(context) {
   let data = [];
   let updatedAt;
   let error;
-  let loading = false;
 
-  function render() {
-    const config = vscode.workspace.getConfiguration('codexUsage');
-    const stale = data.length > 0 && (
-      error ||
-      Date.now() - updatedAt >
-        config.get('refreshIntervalSeconds', 60) * 2000 ||
-      data.some(w => w.resetsAt && w.resetsAt <= Date.now())
-    );
-    item.text = data.length
-      ? `$(pulse) Codex: ${data.map(w => `${w.label} ${w.remaining}%`).join(' · ')} remaining${stale ? ' (stale)' : ''}`
-      : loading
-        ? '$(sync~spin) Codex usage'
-        : '$(warning) Codex: unavailable';
-    item.backgroundColor = data.some(w => w.remaining <= config.get('warningThresholdPercent', 20))
-      ? new vscode.ThemeColor('statusBarItem.warningBackground')
-      : undefined;
+  function renderAllowances(config, tooltip, stale) {
+    const criticalThreshold = config.get('criticalThresholdPercent', 33);
+    const warningThreshold = config.get('warningThresholdPercent', 66);
+    const ids = new Set(data.map(window => window.id));
+    for (const [id, allowance] of allowanceItems) {
+      if (!ids.has(id)) {
+        allowance.dispose();
+        allowanceItems.delete(id);
+      }
+    }
+    for (const [index, window] of data.entries()) {
+      const priority = 99 - index;
+      let allowance = allowanceItems.get(window.id);
+      // VS Code fixes priority at creation. Keep the ID when an item moves.
+      if (!allowance || allowance.priority !== priority) {
+        allowance?.dispose();
+        allowance = vscode.window.createStatusBarItem(
+          `codexUsage.window.${window.id}`, vscode.StatusBarAlignment.Right, priority
+        );
+        allowance.command = 'codexUsage.refresh';
+        allowanceItems.set(window.id, allowance);
+      }
+      allowance.name = `Codex ${window.label} remaining allowance`;
+      allowance.text = `${gauge(window.remaining)} ${window.label} ${window.remaining}%${stale ? ' (stale)' : ''}`;
+      allowance.color = new vscode.ThemeColor(
+        allowanceColour(window.remaining, criticalThreshold, warningThreshold)
+      );
+      allowance.accessibilityInformation = {
+        label: `Codex ${window.label}: ${window.remaining}% remaining${stale ? ', stale' : ''}`
+      };
+      allowance.tooltip = tooltip;
+      allowance.show();
+    }
+  }
+
+  function createTooltip(stale) {
     const tooltip = new vscode.MarkdownString();
     tooltip.appendText('Codex remaining allowance\n\n');
-    for (const w of data) {
+    for (const window of data) {
       tooltip.appendText(
-        `${w.label}: ${w.remaining}% remaining. Resets ${
-          w.resetsAt
-            ? new Date(w.resetsAt).toLocaleString()
+        `${window.label}: ${window.remaining}% remaining. Resets ${
+          window.resetsAt
+            ? new Date(window.resetsAt).toLocaleString()
             : 'at an unknown time'
         }.\n\n`
       );
@@ -82,32 +108,49 @@ function activate(context) {
     if (stale) tooltip.appendText('These values are stale.\n\n');
     tooltip.appendText('Click to refresh.');
     tooltip.appendMarkdown(' [Open usage dashboard](https://chatgpt.com/settings/usage?tab=overview)');
-    item.tooltip = tooltip;
-    item.accessibilityInformation = { label: item.text.replace(/\$\([^)]+\) /g, '') };
-    item.show();
+    return tooltip;
   }
 
-  function accept(result) {
-    data = windows(result);
-    updatedAt = Date.now();
-    error = data.length ? undefined : 'Codex returned no allowance windows for this account.';
-    render();
+  function render() {
+    const config = vscode.workspace.getConfiguration('codexUsage');
+    const now = Date.now();
+    const stale = data.length > 0 && (
+      Boolean(error) ||
+      now - updatedAt > config.get('refreshIntervalSeconds', 60) * 2000 ||
+      data.some(window => window.resetsAt && window.resetsAt <= now)
+    );
+    if (data.length) {
+      item.text = `Codex:${stale ? ' (stale)' : ''}`;
+    } else if (busy) {
+      item.text = '$(sync~spin) Codex usage';
+    } else {
+      item.text = '$(warning) Codex: unavailable';
+    }
+    item.tooltip = createTooltip(stale);
+    renderAllowances(config, item.tooltip, stale);
+    item.accessibilityInformation = { label: item.text.replace(/\$\([^)]+\) /g, '') };
+    item.show();
   }
 
   async function refresh() {
     if (disposed || busy) return;
     busy = true;
-    loading = true;
     const current = generation;
     render();
     try {
-      if (!client || client.closed) {
-        client?.dispose();
-        client = new CodexClient(executable());
-        await client.initialize();
+      let connection = client;
+      if (!connection || connection.closed) {
+        connection?.dispose();
+        connection = new CodexClient(executable());
+        client = connection;
+        await connection.initialize();
       }
-      const result = await client.request('account/rateLimits/read');
-      if (!disposed && current === generation) accept(result);
+      const result = await connection.request('account/rateLimits/read');
+      if (!disposed && current === generation) {
+        data = windows(result);
+        updatedAt = Date.now();
+        error = data.length ? undefined : 'Codex returned no allowance windows for this account.';
+      }
     } catch (reason) {
       if (!disposed && current === generation) {
         error = reason.code === 'ENOENT'
@@ -118,7 +161,6 @@ function activate(context) {
       }
     } finally {
       busy = false;
-      loading = false;
       if (!disposed) {
         render();
         if (current !== generation) void refresh();
@@ -126,13 +168,18 @@ function activate(context) {
     }
   }
 
-  function configure() {
+  function restartConnection() {
     generation++;
     client?.dispose();
     client = undefined;
     data = [];
     updatedAt = undefined;
     error = undefined;
+    render();
+    void refresh();
+  }
+
+  function scheduleRefresh() {
     clearInterval(timer);
     const seconds = Math.max(
       30,
@@ -142,7 +189,6 @@ function activate(context) {
       render();
       void refresh();
     }, seconds * 1000);
-    void refresh();
   }
 
   context.subscriptions.push(
@@ -154,17 +200,23 @@ function activate(context) {
       )
     ),
     vscode.workspace.onDidChangeConfiguration(event => {
-      if (event.affectsConfiguration('codexUsage')) configure();
+      if (!event.affectsConfiguration('codexUsage')) return;
+      if (event.affectsConfiguration('codexUsage.refreshIntervalSeconds')) scheduleRefresh();
+      if (event.affectsConfiguration('codexUsage.executablePath')) restartConnection();
+      else render();
     }),
     {
       dispose() {
         disposed = true;
         clearInterval(timer);
+        for (const allowance of allowanceItems.values()) allowance.dispose();
+        allowanceItems.clear();
         client?.dispose();
       }
     }
   );
-  configure();
+  scheduleRefresh();
+  void refresh();
 }
 
 module.exports = { activate };

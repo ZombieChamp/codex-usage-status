@@ -43,6 +43,7 @@ types = '''<?xml version="1.0" encoding="utf-8"?>
   <Default Extension="js" ContentType="application/javascript"/>
   <Default Extension="md" ContentType="text/markdown"/>
   <Default Extension="png" ContentType="image/png"/>
+  <Default Extension="woff" ContentType="font/woff"/>
   <Default Extension="vsixmanifest" ContentType="text/xml"/>
   <Override PartName="/extension/LICENCE" ContentType="text/plain"/>
 </Types>'''
@@ -55,6 +56,8 @@ with ZipFile(target, "w", ZIP_DEFLATED) as archive:
         "README.md",
         "LICENCE",
         package["icon"],
+        "media/screenshot.png",
+        "media/gauges.woff",
         "src/client.js",
         "src/usage.js",
         "src/extension.js",
