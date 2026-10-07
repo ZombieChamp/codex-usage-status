@@ -73,7 +73,7 @@ function activate(context) {
         allowanceItems.set(window.id, allowance);
       }
       allowance.name = `Codex ${window.label} remaining allowance`;
-      allowance.text = `${gauge(window.remaining)} ${window.label} ${window.remaining}%${stale ? ' (stale)' : ''}`;
+      allowance.text = `$(codex-usage-chatgpt) ${gauge(window.remaining)} ${window.label} ${window.remaining}%${stale ? ' (stale)' : ''}`;
       allowance.color = new vscode.ThemeColor(
         allowanceColour(window.remaining, criticalThreshold, warningThreshold)
       );
@@ -120,16 +120,14 @@ function activate(context) {
       data.some(window => window.resetsAt && window.resetsAt <= now)
     );
     if (data.length) {
-      item.text = `Codex:${stale ? ' (stale)' : ''}`;
-    } else if (busy) {
-      item.text = '$(sync~spin) Codex usage';
+      item.hide();
     } else {
-      item.text = '$(warning) Codex: unavailable';
+      item.text = busy ? '$(sync~spin) Codex usage' : '$(warning) Codex: unavailable';
+      item.accessibilityInformation = { label: item.text.replace(/\$\([^)]+\) /g, '') };
+      item.show();
     }
     item.tooltip = createTooltip(stale);
     renderAllowances(config, item.tooltip, stale);
-    item.accessibilityInformation = { label: item.text.replace(/\$\([^)]+\) /g, '') };
-    item.show();
   }
 
   async function refresh() {

@@ -3,7 +3,7 @@
   "displayName": "Codex Usage Status",
   "icon": "media/icon.png",
   "description": "Show remaining Codex allowance and reset times in the status bar.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "ZombieChamp",
   "license": "GPL-3.0-only",
   "repository": {
@@ -25,6 +25,7 @@
   "main": "./src/extension.js",
   "scripts": {
     "test": "node --test",
+    "check:icons": "python3 -m unittest discover -s test -p test_icons.py",
     "package": "python3 scripts/package.py"
   },
   "capabilities": {
@@ -785,6 +786,13 @@
         "default": {
           "fontPath": "./media/gauges.woff",
           "fontCharacter": "\\E064"
+        }
+      },
+      "codex-usage-chatgpt": {
+        "description": "ChatGPT logo before each Codex allowance gauge.",
+        "default": {
+          "fontPath": "./media/gauges.woff",
+          "fontCharacter": "\\E065"
         }
       }
     }

@@ -8,7 +8,7 @@ A VS Code extension that shows your remaining Codex allowance in the status bar.
 
 The extension reads account rate limits through a local `codex app-server` process. It displays the allowance windows returned for your account, including separate limit names when more than one is available.
 
-<img src="media/screenshot.png" alt="Codex status bar showing a green five-hour gauge at 80% and a yellow weekly gauge at 65%, with the reset-time tooltip open" width="550">
+<img src="media/screenshot.png" alt="Codex status bar showing ChatGPT logos before a green five-hour gauge at 80% and a yellow weekly gauge at 65%, with the reset-time tooltip open" width="550">
 
 Captured in VS Code with sample usage data and the default warning and critical thresholds.
 
@@ -26,7 +26,9 @@ The extension starts after VS Code finishes loading and checks usage immediately
 
 ## Usage
 
-Each allowance window appears as a circular gauge with its exact percentage remaining. The gauge rounds fractional percentages to the nearest whole percentage. Each allowance's gauge and text change colour independently, using your theme's green, yellow and red terminal colours.
+Each allowance window appears as the ChatGPT logo followed by a circular gauge with its exact percentage remaining. The gauge rounds fractional percentages to the nearest whole percentage. Each allowance's logo, gauge and text change colour independently, using your theme's green, yellow and red terminal colours.
+
+The allowance gauges appear once usage loads. A separate loading or unavailable message appears when there are no allowance values to display.
 
 The tooltip on each item shows reset times and the last successful check in your local time zone, using your system's default date and time format.
 
@@ -80,7 +82,13 @@ npm run package
 
 It writes `dist/codex-usage-status-<version>.vsix` using the version in `package.json`.
 
-The gauge font in `media/gauges.woff` contains 101 icons, one for each whole percentage from 0% to 100%. To change the gauge shapes, install the Python `fonttools` package in a virtual environment and run `python scripts/generate_gauges.py`. This regenerates the font and its icon declarations in `package.json`. Normal packaging does not require FontTools.
+The icon font in `media/gauges.woff` contains 101 gauges, one for each whole percentage from 0% to 100%, and the ChatGPT logo from `media/chatgpt.svg`. To change the icons, install the Python `fonttools` package in a virtual environment and run `python scripts/generate_gauges.py`. This regenerates the font and its icon declarations in `package.json`. Normal packaging does not require FontTools.
+
+With that virtual environment active, run `npm run check:icons` to compare the generated font and icon declarations with the committed files and test the SVG input checks. This command requires FontTools. `npm test` runs the JavaScript tests without it.
+
+The logo SVG must have a `viewBox` with four finite numbers and positive width and height. Numbers can use whitespace or comma separators.
+
+The SVG must contain exactly one direct filled `path`, with an optional `title`. Combine shapes into a single compound path. Resolve overlaps so filled regions and holes follow the nonzero winding rule. The generator rejects multiple paths, groups, transforms, strokes, CSS styling and other SVG elements or attributes. Convert these constructs to the compound path before regenerating the font. The fill colour becomes the status bar item's theme colour.
 
 ## Contributing
 

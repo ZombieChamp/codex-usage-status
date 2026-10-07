@@ -109,6 +109,14 @@ node --test test/client.test.js
 
 Add regression coverage for changes to client behaviour or allowance parsing in the corresponding file under `test/`.
 
+For icon changes, install `fonttools` in a Python virtual environment and activate it, then run:
+
+```sh
+npm run check:icons
+```
+
+This check regenerates the font and icon declarations in a temporary directory, compares them with the committed files, and tests the supported SVG input format. To update the committed assets, run `python scripts/generate_gauges.py`. See the [README](../README.md#development) for the SVG requirements. The JavaScript tests and normal packaging do not require FontTools.
+
 ### Build and check a VSIX
 
 ```sh
@@ -125,6 +133,7 @@ To check the package, run **Extensions: Install from VSIX...** in VS Code and se
 - `src/client.js` manages the local app-server process and protocol requests.
 - `src/usage.js` converts allowance data into display windows.
 - `test/client.test.js` and `test/usage.test.js` cover the client and allowance parsing.
+- `test/icons.test.js` checks icon registration. `test/test_icons.py` checks generated assets and the SVG input format with FontTools.
 - `scripts/package.py` builds the VSIX from an explicit file list. Update that list if you add files the extension needs at runtime.
 - `package.json` declares commands, settings, extension metadata, and development scripts.
 

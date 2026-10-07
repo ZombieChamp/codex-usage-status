@@ -4,27 +4,30 @@ const { CodexClient } = require('../src/client');
 
 const server = `
 const rl = require('node:readline').createInterface({ input: process.stdin });
-let initialized = false;
+let handshake = 'new';
 rl.on('line', line => {
   const m = JSON.parse(line);
   if (m.method === 'initialized') {
-    initialized = true;
+    handshake = handshake === 'initialize-replied' && m.id === undefined ? 'ready' : 'invalid';
+    return;
+  }
+  if (m.method === 'initialize' && handshake === 'new') {
+    handshake = 'initialize-replied';
+    process.stdout.write(JSON.stringify({ id: m.id, result: {} }) + '\\n');
     return;
   }
   if (m.method === 'hang') return;
   if (m.method === 'exit') process.exit(0);
-  const reply = m.method === 'initialize'
-    ? { id: m.id, result: {} }
-    : initialized && m.method === 'account/rateLimits/read'
-      ? {
-          id: m.id,
-          result: {
-            rateLimits: {
-              primary: { usedPercent: 25 }
-            }
+  const reply = handshake === 'ready' && m.method === 'account/rateLimits/read'
+    ? {
+        id: m.id,
+        result: {
+          rateLimits: {
+            primary: { usedPercent: 25 }
           }
         }
-      : { id: m.id, error: { code: -1, message: 'Denied' } };
+      }
+    : { id: m.id, error: { code: -1, message: 'Denied' } };
   process.stdout.write(JSON.stringify(reply) + '\\n');
 });`;
 
@@ -47,6 +50,7 @@ test('times out hung requests and rejects requests when the server exits', async
 
   await client.initialize();
   await assert.rejects(client.request('hang'), /timed out/);
+  assert.equal(client.pending.size, 0);
   await assert.rejects(client.request('exit'), /stopped/);
   assert.equal(client.pending.size, 0);
 });
