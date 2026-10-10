@@ -3,6 +3,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { CodexClient } = require('./client');
 const { windows, gauge } = require('./usage');
+const { resetDescription, updateAge } = require('./time');
 
 function allowanceColour(remaining, criticalThreshold, warningThreshold) {
   if (remaining <= criticalThreshold) return 'terminal.ansiRed';
@@ -39,10 +40,10 @@ function executable() {
 function activate(context) {
   const item = vscode.window.createStatusBarItem('codexUsage', vscode.StatusBarAlignment.Right, 100);
   item.name = 'Codex remaining allowance';
-  item.command = 'codexUsage.refresh';
   const allowanceItems = new Map();
   let client;
-  let timer;
+  let refreshTimer;
+  let presentationTimer;
   let busy = false;
   let disposed = false;
   let generation = 0;
@@ -50,7 +51,7 @@ function activate(context) {
   let updatedAt;
   let error;
 
-  function renderAllowances(config, tooltip, stale) {
+  function renderAllowances(config, stale, now) {
     const criticalThreshold = config.get('criticalThresholdPercent', 33);
     const warningThreshold = config.get('warningThresholdPercent', 66);
     const ids = new Set(data.map(window => window.id));
@@ -69,7 +70,6 @@ function activate(context) {
         allowance = vscode.window.createStatusBarItem(
           `codexUsage.window.${window.id}`, vscode.StatusBarAlignment.Right, priority
         );
-        allowance.command = 'codexUsage.refresh';
         allowanceItems.set(window.id, allowance);
       }
       allowance.name = `Codex ${window.label} remaining allowance`;
@@ -80,25 +80,23 @@ function activate(context) {
       allowance.accessibilityInformation = {
         label: `Codex ${window.label}: ${window.remaining}% remaining${stale ? ', stale' : ''}`
       };
-      allowance.tooltip = tooltip;
+      allowance.tooltip = createTooltip(window, stale, now);
       allowance.show();
     }
   }
 
-  function createTooltip(stale) {
+  function createTooltip(window, stale, now) {
     const tooltip = new vscode.MarkdownString();
-    tooltip.appendText('Codex remaining allowance\n\n');
-    for (const window of data) {
-      tooltip.appendText(
-        `${window.label}: ${window.remaining}% remaining. Resets ${
-          window.resetsAt
-            ? new Date(window.resetsAt).toLocaleString()
-            : 'at an unknown time'
-        }.\n\n`
-      );
+    if (window) {
+      tooltip.appendText(`Codex · ${window.label} allowance · `);
+      tooltip.appendMarkdown(`**${window.remaining}% remaining**\n\n`);
+      tooltip.appendText(resetDescription(window.resetsAt, now));
+      tooltip.appendMarkdown('\n\n');
+    } else {
+      tooltip.appendText('Codex remaining allowance\n\n');
     }
-    if (updatedAt) {
-      tooltip.appendText(`Last checked: ${new Date(updatedAt).toLocaleString()}\n\n`);
+    if (updatedAt !== undefined) {
+      tooltip.appendText(`Updated ${updateAge(updatedAt, now)}\n\n`);
     }
     if (error) {
       tooltip.appendText(
@@ -106,8 +104,7 @@ function activate(context) {
       );
     }
     if (stale) tooltip.appendText('These values are stale.\n\n');
-    tooltip.appendText('Click to refresh.');
-    tooltip.appendMarkdown(' [Open usage dashboard](https://chatgpt.com/settings/usage?tab=overview)');
+    tooltip.appendMarkdown('[Open usage dashboard](https://chatgpt.com/settings/usage?tab=overview)');
     return tooltip;
   }
 
@@ -126,8 +123,8 @@ function activate(context) {
       item.accessibilityInformation = { label: item.text.replace(/\$\([^)]+\) /g, '') };
       item.show();
     }
-    item.tooltip = createTooltip(stale);
-    renderAllowances(config, item.tooltip, stale);
+    item.tooltip = createTooltip(undefined, stale, now);
+    renderAllowances(config, stale, now);
   }
 
   async function refresh() {
@@ -178,15 +175,12 @@ function activate(context) {
   }
 
   function scheduleRefresh() {
-    clearInterval(timer);
+    clearInterval(refreshTimer);
     const seconds = Math.max(
       30,
       vscode.workspace.getConfiguration('codexUsage').get('refreshIntervalSeconds', 60)
     );
-    timer = setInterval(() => {
-      render();
-      void refresh();
-    }, seconds * 1000);
+    refreshTimer = setInterval(() => void refresh(), seconds * 1000);
   }
 
   context.subscriptions.push(
@@ -206,7 +200,8 @@ function activate(context) {
     {
       dispose() {
         disposed = true;
-        clearInterval(timer);
+        clearInterval(refreshTimer);
+        clearInterval(presentationTimer);
         for (const allowance of allowanceItems.values()) allowance.dispose();
         allowanceItems.clear();
         client?.dispose();
@@ -214,6 +209,7 @@ function activate(context) {
     }
   );
   scheduleRefresh();
+  presentationTimer = setInterval(render, 60000);
   void refresh();
 }
 

@@ -60,6 +60,7 @@ with ZipFile(target, "w", ZIP_DEFLATED) as archive:
         "media/gauges.woff",
         "src/client.js",
         "src/usage.js",
+        "src/time.js",
         "src/extension.js",
     ]:
         archive.write(root / name, "extension/" + name)

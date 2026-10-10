@@ -132,7 +132,8 @@ To check the package, run **Extensions: Install from VSIX...** in VS Code and se
 - `src/extension.js` handles VS Code activation, commands, settings, and the status bar.
 - `src/client.js` manages the local app-server process and protocol requests.
 - `src/usage.js` converts allowance data into display windows.
-- `test/client.test.js` and `test/usage.test.js` cover the client and allowance parsing.
+- `src/time.js` formats reset descriptions and update ages.
+- `test/client.test.js`, `test/usage.test.js` and `test/time.test.js` cover the client, allowance parsing and time formatting.
 - `test/icons.test.js` checks icon registration. `test/test_icons.py` checks generated assets and the SVG input format with FontTools.
 - `scripts/package.py` builds the VSIX from an explicit file list. Update that list if you add files the extension needs at runtime.
 - `package.json` declares commands, settings, extension metadata, and development scripts.

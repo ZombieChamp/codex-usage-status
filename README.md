@@ -4,11 +4,11 @@
 
 [![Licence: GPL v3](https://img.shields.io/badge/Licence-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-A VS Code extension that shows your remaining Codex allowance in the status bar. Hover over it to see reset times and the last successful check, or click it to refresh.
+A VS Code extension that shows your remaining Codex allowance in the status bar. Hover over it to see reset times and the last successful check.
 
 The extension reads account rate limits through a local `codex app-server` process. It displays the allowance windows returned for your account, including separate limit names when more than one is available.
 
-<img src="media/screenshot.png" alt="Codex status bar showing ChatGPT logos before a green five-hour gauge at 80% and a yellow weekly gauge at 65%, with the reset-time tooltip open" width="550">
+<img src="media/screenshot.png" alt="Codex status bar showing a green 5h gauge at 80% and a yellow weekly gauge at 65%, with the 5h tooltip open" width="550">
 
 Captured in VS Code with sample usage data and the default warning and critical thresholds.
 
@@ -30,9 +30,11 @@ Each allowance window appears as the ChatGPT logo followed by a circular gauge w
 
 The allowance gauges appear once usage loads. A separate loading or unavailable message appears when there are no allowance values to display.
 
-The tooltip on each item shows reset times and the last successful check in your local time zone, using your system's default date and time format.
+Each tooltip title identifies its allowance window and shows the remaining percentage in bold, such as `Codex · 5h allowance · 46% remaining` or `Codex · Weekly allowance · 65% remaining`. The tooltip shows the time until reset, such as `Resets in 1h 29m · Today at 23:02`. Reset times use your local time zone and a 24-hour clock. Resets beyond tomorrow show a short date, and overdue resets show `Reset due`. The last successful check appears as `Updated just now`, `Updated 1 min ago`, or an age in hours or days.
 
-- Click the status bar item or run **Codex Usage: Refresh** to check again.
+Countdowns and update ages refresh every minute, independently of usage checks.
+
+- Run **Codex Usage: Refresh** to check again.
 - Run **Codex Usage: Open Usage Dashboard**, or use the tooltip link, to open the account usage page.
 - Each allowance is red at or below the configured critical threshold, yellow at or below the warning threshold, and green otherwise. The warning threshold defaults to 66%. The critical threshold defaults to 33% and takes precedence over the warning threshold.
 - Each allowance keeps its previous value and shows a `stale` label if a refresh fails, more than two refresh intervals have elapsed since the last success, or a reported reset time has passed.
@@ -56,7 +58,7 @@ If the status bar shows `Codex: unavailable`, hover over it for the error.
 
 - If the executable cannot be found, install Codex or set `codexUsage.executablePath` to its absolute path. Relative paths are rejected.
 - If the account returns no allowance windows, check that Codex is signed in with your ChatGPT account and that the account has usage data available.
-- If a request times out or the app server stops, click to retry. The extension also retries at the next scheduled check.
+- If a request times out or the app server stops, run **Codex Usage: Refresh** to retry. The extension also retries at the next scheduled check.
 
 A stale value is the result of an earlier successful check. Refresh it before relying on the displayed allowance.
 

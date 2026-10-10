@@ -17,6 +17,32 @@ test('uses returned windows and converts reset timestamps to milliseconds', () =
   assert.deepEqual(windows(input), expected);
 });
 
+test('normalises reset timestamps to valid milliseconds or null', () => {
+  const cases = [
+    [undefined, null],
+    [null, null],
+    [NaN, null],
+    [Infinity, null],
+    [-Infinity, null],
+    ['1800000000', null],
+    [8640000000001, null],
+    [-8640000000001, null],
+    [Number.MAX_VALUE, null],
+    [-Number.MAX_VALUE, null],
+    [0, 0],
+    [0.0005, 0.5],
+    [1800000000, 1800000000000],
+    [8640000000000, 8640000000000000],
+    [-8640000000000, -8640000000000000]
+  ];
+
+  for (const [resetsAt, expected] of cases) {
+    const [window] = windows({ rateLimits: { primary: { usedPercent: 20, resetsAt } } });
+    assert.equal(window.resetsAt, expected, `Reset timestamp for ${resetsAt}`);
+    assert.equal(window.remaining, 80);
+  }
+});
+
 test('prefers multiple buckets over legacy data without duplicating them', () => {
   const result = windows({
     rateLimits: { primary: { usedPercent: 0 } },
