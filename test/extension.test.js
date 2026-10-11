@@ -10,7 +10,7 @@ const requireExtension = createRequire(require.resolve('../src/extension'));
 const dashboardLink = '[Open usage dashboard](https://chatgpt.com/settings/usage?tab=overview)';
 
 function tooltipContent(item) {
-  return item.tooltip.calls.map(([, text]) => text).join('');
+  return item.tooltip.value.replaceAll('&nbsp;', ' ');
 }
 
 function localTime(date) {
@@ -47,12 +47,20 @@ async function createExtension(t, settings = {}) {
     ThemeColor: class { constructor(id) { this.id = id; } },
     MarkdownString: class {
       calls = [];
+      value = '';
       appendText(text) {
         this.calls.push(['appendText', text]);
+        // Match VS Code's default MarkdownString escaping and paragraph breaks.
+        this.value += text.replace(/[\\`*_{}[\]()#+!~]/g, '\\$&')
+          .replace(/^([ \t]*)-/gm, '$1\\-')
+          .replace(/[ \t]/g, '&nbsp;')
+          .replace(/>/g, '\\>')
+          .replace(/\n/g, '\n\n');
         return this;
       }
       appendMarkdown(text) {
         this.calls.push(['appendMarkdown', text]);
+        this.value += text;
         return this;
       }
     },
@@ -145,7 +153,7 @@ async function createExtension(t, settings = {}) {
   };
 }
 
-test('renders independent allowance items with tooltips', async t => {
+test('renders independent allowance items with compact tooltips', async t => {
   const { items, status, primary, secondary } = await createExtension(t);
 
   assert.equal(items.length, 3);
@@ -157,26 +165,19 @@ test('renders independent allowance items with tooltips', async t => {
   assert.equal(secondary.color.id, 'terminal.ansiYellow');
   assert.ok(primary.priority > secondary.priority);
   assert.notEqual(primary.tooltip, secondary.tooltip);
-  assert.deepEqual(primary.tooltip.calls.slice(0, 2), [
-    ['appendText', 'Codex · 5h allowance · '],
-    ['appendMarkdown', '**80% remaining**\n\n']
-  ]);
+  assert.ok(tooltipContent(primary).startsWith('Codex · 5h allowance  \n**80% remaining**  \n'));
   assert.doesNotMatch(tooltipContent(primary), /Weekly|66% remaining/);
-  assert.deepEqual(secondary.tooltip.calls.slice(0, 2), [
-    ['appendText', 'Codex · Weekly allowance · '],
-    ['appendMarkdown', '**66% remaining**\n\n']
-  ]);
+  assert.ok(tooltipContent(secondary).startsWith('Codex · Weekly allowance  \n**66% remaining**  \n'));
   assert.doesNotMatch(tooltipContent(secondary), /5h|80% remaining/);
   for (const item of [primary, secondary]) {
     assert.equal(item.command, undefined);
     assert.ok(item.visible);
-    assert.match(tooltipContent(item), /Updated just now/);
+    assert.ok(tooltipContent(item).endsWith(`Updated just now  \n${dashboardLink}`));
     assert.doesNotMatch(tooltipContent(item), /Click to refresh|command:codexUsage\.refresh/);
-    assert.deepEqual(item.tooltip.calls.at(-1), ['appendMarkdown', dashboardLink]);
   }
 });
 
-test('passes allowance labels and refresh errors through appendText', async t => {
+test('escapes allowance labels and refresh errors in tooltips', async t => {
   const { items, response, refresh } = await createExtension(t);
   const label = '*Special-project* [link](command:bad)';
   response.result = {
@@ -191,7 +192,10 @@ test('passes allowance labels and refresh errors through appendText', async t =>
   await refresh();
   const allowance = items.find(item => !item.disposed && item.id === 'codexUsage.window.special.primary');
   assert.deepEqual(allowance.tooltip.calls[0],
-    ['appendText', `Codex · ${label} 5h allowance · `]);
+    ['appendText', `Codex · ${label} 5h allowance`]);
+  assert.ok(tooltipContent(allowance).startsWith(
+    'Codex · \\*Special-project\\* \\[link\\]\\(command:bad\\) 5h allowance  \n'
+  ));
 
   const message = '*Connection* [lost](command:bad)\nRetry > now';
   response.error = new Error(message);
@@ -199,11 +203,197 @@ test('passes allowance labels and refresh errors through appendText', async t =>
   assert.ok(allowance.tooltip.calls.some(([method, text]) =>
     method === 'appendText' && text.startsWith(`${message}\n\n`)
   ));
-  assert.deepEqual(allowance.tooltip.calls.filter(([method]) => method === 'appendMarkdown'), [
-    ['appendMarkdown', '**80% remaining**\n\n'],
-    ['appendMarkdown', '\n\n'],
-    ['appendMarkdown', dashboardLink]
-  ]);
+  assert.ok(tooltipContent(allowance).includes(
+    '\\*Connection\\* \\[lost\\]\\(command:bad\\)\n\nRetry \\> now\n\n\n\n'
+  ));
+  assert.ok(tooltipContent(allowance).endsWith(
+    `These values are stale.\n\n\n\nUpdated just now  \n${dashboardLink}`
+  ));
+});
+
+test('labels reset counts without credit details as account totals without another request', async t => {
+  const { items, primary, secondary, response, refresh, clients } = await createExtension(t);
+  response.result.rateLimitResetCredits = { availableCount: 2, credits: null };
+
+  await refresh();
+
+  assert.equal(items.length, 3);
+  assert.equal(clients.length, 1);
+  assert.equal(clients[0].requests, 2);
+  for (const allowance of [primary, secondary]) {
+    assert.match(tooltipContent(allowance), /2 account reset credits available\n\nUpdated just now/);
+    assert.ok(allowance.tooltip.calls.some(([method, text]) =>
+      method === 'appendText' && text === '2 account reset credits available'
+    ));
+  }
+
+  response.result.rateLimitResetCredits.availableCount = 0;
+  await refresh();
+  assert.match(tooltipContent(primary), /0 account reset credits available/);
+  assert.match(tooltipContent(secondary), /0 account reset credits available/);
+});
+
+test('clears reset details when a successful check omits credit data', async t => {
+  const { primary, secondary, response, refresh } = await createExtension(t);
+  response.result.rateLimitResetCredits = { availableCount: 2 };
+  await refresh();
+  assert.match(tooltipContent(primary), /2 account reset credits available/);
+
+  delete response.result.rateLimitResetCredits;
+  await refresh();
+  for (const allowance of [primary, secondary]) {
+    assert.doesNotMatch(tooltipContent(allowance), /account reset credits? available/);
+    assert.doesNotMatch(allowance.text, /stale/);
+  }
+});
+
+test('retains the reset count as stale on failure and replaces it on recovery', async t => {
+  const { primary, secondary, response, refresh } = await createExtension(t);
+  response.result.rateLimitResetCredits = { availableCount: 2 };
+  await refresh();
+
+  response.error = new Error('Connection lost');
+  await refresh();
+  for (const allowance of [primary, secondary]) {
+    assert.match(tooltipContent(allowance), /2 account reset credits available/);
+    assert.match(tooltipContent(allowance), /These values are stale/);
+  }
+
+  response.error = undefined;
+  response.result.rateLimitResetCredits.availableCount = 1;
+  await refresh();
+  for (const allowance of [primary, secondary]) {
+    assert.match(tooltipContent(allowance), /1 account reset credit available/);
+    assert.doesNotMatch(tooltipContent(allowance), /stale|Connection lost/);
+  }
+});
+
+test('shows the same account reset summary across allowance buckets', async t => {
+  const { items, primary, secondary, response, refresh, clock, clients } = await createExtension(t);
+  clock.now = new Date(2026, 9, 10, 21, 30).getTime();
+  response.result.rateLimitsByLimitId = {
+    codex: response.result.rateLimits,
+    other: { primary: { usedPercent: 40, windowDurationMins: 300 } }
+  };
+  response.result.rateLimitResetCredits = {
+    availableCount: 1,
+    credits: [{ status: 'available', expiresAt: (clock.now + 30 * 60000) / 1000 }]
+  };
+  await refresh();
+
+  assert.equal(items.length, 4);
+  assert.equal(clients[0].requests, 2);
+  const other = items.find(item => item.id === 'codexUsage.window.other.primary');
+  for (const allowance of [primary, secondary, other]) {
+    assert.ok(allowance.tooltip.value.endsWith(
+      '1&nbsp;account&nbsp;reset&nbsp;credit&nbsp;available  \n' +
+      `Next&nbsp;credit&nbsp;expires&nbsp;in&nbsp;30m&nbsp;·&nbsp;Today&nbsp;at&nbsp;${localTime(new Date(clock.now + 30 * 60000))}\n\n` +
+      `Updated&nbsp;just&nbsp;now  \n${dashboardLink}`
+    ));
+  }
+});
+
+test('updates credit expiry countdowns and removes expired credits without polling', async t => {
+  const { primary, secondary, response, refresh, clock, timers, clients } =
+    await createExtension(t, { refreshIntervalSeconds: 3600 });
+  clock.now = new Date(2026, 9, 10, 23, 59).getTime();
+  response.result.rateLimitResetCredits = {
+    availableCount: 2,
+    credits: [120000, 3600000].map(delay => ({
+      status: 'available', expiresAt: (clock.now + delay) / 1000
+    }))
+  };
+  await refresh();
+  assert.match(tooltipContent(primary), /Next credit expires in 2m · Tomorrow at/);
+  const requests = clients[0].requests;
+
+  clock.now += 60000;
+  timers[1].callback();
+  assert.match(tooltipContent(primary), /Next credit expires in 1m · Today at/);
+
+  clock.now += 60000;
+  timers[1].callback();
+  for (const allowance of [primary, secondary]) {
+    assert.match(tooltipContent(allowance), /1 account reset credit available  \nNext credit expires in 58m · Today at/);
+  }
+  assert.equal(clients[0].requests, requests);
+});
+
+test('does not restore a credit when a refresh completes after its expiry', async t => {
+  const { primary, secondary, response, refresh, clock, timers, clients } =
+    await createExtension(t, { refreshIntervalSeconds: 3600 });
+  response.result.rateLimitResetCredits = {
+    availableCount: 1,
+    credits: [{
+      status: 'available', expiresAt: (clock.now + 60000) / 1000
+    }]
+  };
+  await refresh();
+  assert.match(tooltipContent(primary), /1 account reset credit available/);
+
+  let resolveResponse;
+  response.pending = new Promise(resolve => { resolveResponse = resolve; });
+  const pendingRefresh = refresh();
+  clock.now += 60000;
+  response.pending = undefined;
+  resolveResponse(response.result);
+  await pendingRefresh;
+  for (const allowance of [primary, secondary]) {
+    assert.match(tooltipContent(allowance), /0 account reset credits available/);
+    assert.doesNotMatch(tooltipContent(allowance), /Next credit expires/);
+  }
+
+  const requests = clients[0].requests;
+  clock.now += 60000;
+  timers[1].callback();
+  for (const allowance of [primary, secondary]) {
+    assert.match(tooltipContent(allowance), /0 account reset credits available/);
+  }
+  assert.equal(clients[0].requests, requests);
+});
+
+test('deducts a listed expiry from capped account totals without polling', async t => {
+  const { primary, secondary, response, refresh, clock, timers, clients } =
+    await createExtension(t, { refreshIntervalSeconds: 3600 });
+  response.result.rateLimitResetCredits = {
+    availableCount: 3,
+    credits: [{ status: 'available', expiresAt: (clock.now + 60000) / 1000 }]
+  };
+  await refresh();
+  for (const allowance of [primary, secondary]) {
+    assert.match(tooltipContent(allowance), /3 account reset credits available  \nEarliest known credit expires in 1m/);
+  }
+  const requests = clients[0].requests;
+
+  clock.now += 60000;
+  timers[1].callback();
+  for (const allowance of [primary, secondary]) {
+    assert.match(tooltipContent(allowance), /2 account reset credits available/);
+    assert.doesNotMatch(tooltipContent(allowance), /3 account reset credits available|credit expires|Next credit expires/);
+  }
+  assert.equal(clients[0].requests, requests);
+});
+
+test('retains account credit details and updates their expiry countdown after a failed check', async t => {
+  const { primary, response, refresh, clock, timers } = await createExtension(t);
+  response.result.rateLimitResetCredits = {
+    availableCount: 1,
+    credits: [{ status: 'available', expiresAt: (clock.now + 120000) / 1000 }]
+  };
+  await refresh();
+  response.error = new Error('Connection lost');
+  clock.now += 60000;
+  timers[0].callback();
+  await settle();
+  assert.match(tooltipContent(primary), /1 account reset credit available  \nNext credit expires in 1m/);
+  assert.match(tooltipContent(primary), /These values are stale/);
+
+  response.error = undefined;
+  response.result.rateLimitResetCredits.availableCount = 0;
+  response.result.rateLimitResetCredits.credits = [];
+  await refresh();
+  assert.match(tooltipContent(primary), /0 account reset credits available/);
+  assert.doesNotMatch(tooltipContent(primary), /Next credit expires|These values are stale/);
 });
 
 test('shows compact reset times for each allowance', async t => {
@@ -437,9 +627,9 @@ test('preserves bucket visibility preferences and display order when buckets are
   assert.equal(specialItem.id, original[1].id);
   assert.equal(specialItem.visible, false);
   assert.ok(specialItem.priority > codexItem.priority);
-  assert.match(tooltipContent(codexItem), /^Codex · codex 5h allowance · \*\*80% remaining\*\*\n\n/);
+  assert.match(tooltipContent(codexItem), /^Codex · codex 5h allowance  \n\*\*80% remaining\*\*  \n/);
   assert.doesNotMatch(tooltipContent(codexItem), /Special|Weekly|60% remaining/);
-  assert.match(tooltipContent(specialItem), /^Codex · Special Weekly allowance · \*\*60% remaining\*\*\n\n/);
+  assert.match(tooltipContent(specialItem), /^Codex · Special Weekly allowance  \n\*\*60% remaining\*\*  \n/);
   assert.doesNotMatch(tooltipContent(specialItem), /codex 5h|80% remaining/);
 });
 

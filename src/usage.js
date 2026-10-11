@@ -1,3 +1,5 @@
+const { timestamp } = require('./time');
+
 function duration(minutes) {
   if (minutes === 10080) return 'Weekly';
   if (!Number.isFinite(minutes) || minutes <= 0) return 'Window';
@@ -18,12 +20,11 @@ function windows(result) {
     ['primary', 'secondary'].flatMap(key => {
       const window = bucket?.[key];
       if (!window || !Number.isFinite(window.usedPercent)) return [];
-      const resetsAt = Number.isFinite(window.resetsAt) ? window.resetsAt * 1000 : NaN;
       return [{
         id: `${id}.${key}`,
         label: `${entries.length > 1 ? `${bucket.limitName || id} ` : ''}${duration(window.windowDurationMins)}`,
         remaining: Math.max(0, Math.min(100, 100 - window.usedPercent)),
-        resetsAt: Number.isFinite(new Date(resetsAt).getTime()) ? resetsAt : null
+        resetsAt: timestamp(window.resetsAt)
       }];
     })
   );

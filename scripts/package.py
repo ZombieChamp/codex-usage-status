@@ -59,6 +59,7 @@ with ZipFile(target, "w", ZIP_DEFLATED) as archive:
         "media/screenshot.png",
         "media/gauges.woff",
         "src/client.js",
+        "src/credits.js",
         "src/usage.js",
         "src/time.js",
         "src/extension.js",

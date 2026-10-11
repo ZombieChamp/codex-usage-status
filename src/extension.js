@@ -3,6 +3,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { CodexClient } = require('./client');
 const { windows, gauge } = require('./usage');
+const { resetCredits, resetCreditLines } = require('./credits');
 const { resetDescription, updateAge } = require('./time');
 
 function allowanceColour(remaining, criticalThreshold, warningThreshold) {
@@ -48,6 +49,7 @@ function activate(context) {
   let disposed = false;
   let generation = 0;
   let data = [];
+  let creditData = null;
   let updatedAt;
   let error;
 
@@ -88,15 +90,20 @@ function activate(context) {
   function createTooltip(window, stale, now) {
     const tooltip = new vscode.MarkdownString();
     if (window) {
-      tooltip.appendText(`Codex · ${window.label} allowance · `);
-      tooltip.appendMarkdown(`**${window.remaining}% remaining**\n\n`);
+      tooltip.appendText(`Codex · ${window.label} allowance`);
+      tooltip.appendMarkdown(`  \n**${window.remaining}% remaining**  \n`);
       tooltip.appendText(resetDescription(window.resetsAt, now));
       tooltip.appendMarkdown('\n\n');
+      const creditLines = resetCreditLines(creditData, now);
+      if (creditLines.length) {
+        for (const [index, line] of creditLines.entries()) {
+          if (index) tooltip.appendMarkdown('  \n');
+          tooltip.appendText(line);
+        }
+        tooltip.appendMarkdown('\n\n');
+      }
     } else {
       tooltip.appendText('Codex remaining allowance\n\n');
-    }
-    if (updatedAt !== undefined) {
-      tooltip.appendText(`Updated ${updateAge(updatedAt, now)}\n\n`);
     }
     if (error) {
       tooltip.appendText(
@@ -104,6 +111,10 @@ function activate(context) {
       );
     }
     if (stale) tooltip.appendText('These values are stale.\n\n');
+    if (updatedAt !== undefined) {
+      tooltip.appendText(`Updated ${updateAge(updatedAt, now)}`);
+      tooltip.appendMarkdown('  \n');
+    }
     tooltip.appendMarkdown('[Open usage dashboard](https://chatgpt.com/settings/usage?tab=overview)');
     return tooltip;
   }
@@ -142,8 +153,10 @@ function activate(context) {
       }
       const result = await connection.request('account/rateLimits/read');
       if (!disposed && current === generation) {
+        const readAt = Date.now();
         data = windows(result);
-        updatedAt = Date.now();
+        creditData = resetCredits(result, readAt);
+        updatedAt = readAt;
         error = data.length ? undefined : 'Codex returned no allowance windows for this account.';
       }
     } catch (reason) {
@@ -168,6 +181,7 @@ function activate(context) {
     client?.dispose();
     client = undefined;
     data = [];
+    creditData = null;
     updatedAt = undefined;
     error = undefined;
     render();

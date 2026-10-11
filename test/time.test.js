@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { resetDescription, updateAge } = require('../src/time');
+const { resetDescription, expiryDescription, updateAge } = require('../src/time');
 
 function localTime(date) {
   return date.toLocaleTimeString(undefined, {
@@ -68,6 +68,28 @@ test('uses local calendar days for tomorrow when clocks change', () => {
       ` · Tomorrow at ${localTime(reset)}`
     ));
   }
+});
+
+test('formats credit expiries with the same countdown, local dates and 24-hour clock', () => {
+  const now = new Date(2026, 9, 10, 21, 30).getTime();
+  const today = new Date(2026, 9, 10, 23);
+  const tomorrow = new Date(2026, 9, 11, 0);
+  const later = new Date(2026, 9, 12, 0);
+  const date = later.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  assert.equal(expiryDescription(today.getTime(), now, 'Next expires'),
+    `Next expires in 1h 30m · Today at ${localTime(today)}`);
+  assert.equal(expiryDescription(tomorrow.getTime(), now, 'Next expires'),
+    `Next expires in 2h 30m · Tomorrow at ${localTime(tomorrow)}`);
+  assert.equal(expiryDescription(later.getTime(), now, 'Earliest known credit expires'),
+    `Earliest known credit expires in 1d 2h 30m · ${date} at ${localTime(later)}`);
+});
+
+test('handles unknown and passed credit expiries and rounds countdowns up to a minute', () => {
+  const now = new Date(2026, 9, 10, 12).getTime();
+  assert.equal(expiryDescription(null, now, 'Next expires'), 'Next expires at an unknown time');
+  assert.equal(expiryDescription(now, now), `Expired · Today at ${localTime(new Date(now))}`);
+  assert.equal(expiryDescription(now + 1, now),
+    `Expires in 1m · Today at ${localTime(new Date(now + 1))}`);
 });
 
 test('formats update ages at minute, hour and day boundaries', () => {

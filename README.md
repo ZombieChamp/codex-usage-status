@@ -4,11 +4,11 @@
 
 [![Licence: GPL v3](https://img.shields.io/badge/Licence-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-A VS Code extension that shows your remaining Codex allowance in the status bar. Hover over it to see reset times and the last successful check.
+A VS Code extension that shows your remaining Codex allowance in the status bar. Hover over it to see reset times, account reset credits and the last successful check.
 
 The extension reads account rate limits through a local `codex app-server` process. It displays the allowance windows returned for your account, including separate limit names when more than one is available.
 
-<img src="media/screenshot.png" alt="Codex status bar showing a green 5h gauge at 80% and a yellow weekly gauge at 65%, with the 5h tooltip open" width="550">
+<img src="media/screenshot.png" alt="Codex status bar showing a green 5h gauge at 80% and a yellow weekly gauge at 65%, with the 5h tooltip showing two account reset credits and the next credit expiry" width="550">
 
 Captured in VS Code with sample usage data and the default warning and critical thresholds.
 
@@ -30,7 +30,15 @@ Each allowance window appears as the ChatGPT logo followed by a circular gauge w
 
 The allowance gauges appear once usage loads. A separate loading or unavailable message appears when there are no allowance values to display.
 
-Each tooltip title identifies its allowance window and shows the remaining percentage in bold, such as `Codex · 5h allowance · 46% remaining` or `Codex · Weekly allowance · 65% remaining`. The tooltip shows the time until reset, such as `Resets in 1h 29m · Today at 23:02`. Reset times use your local time zone and a 24-hour clock. Resets beyond tomorrow show a short date, and overdue resets show `Reset due`. The last successful check appears as `Updated just now`, `Updated 1 min ago`, or an age in hours or days.
+Each tooltip title identifies its allowance window, such as `Codex · 5h allowance` or `Codex · Weekly allowance`. The next line shows the remaining percentage in bold, followed by the time until reset, such as `Resets in 1h 29m · Today at 23:02`. Reset times use your local time zone and a 24-hour clock. Resets beyond tomorrow show a short date, and overdue resets show `Reset due`.
+
+The tooltip groups allowance details and account reset credits into separate blocks. The last successful check and usage-dashboard link share a compact footer below any error or stale warning. The check appears as `Updated just now`, `Updated 1 min ago`, or an age in hours or days.
+
+When Codex provides reset credits, each allowance tooltip shows the account total, such as `2 account reset credits available`. The same total appears in every allowance tooltip because the response does not identify eligible windows. These credits are separate from the allowance's scheduled reset. The total starts with the reported count and subtracts listed credits as they expire. If listed available credits outnumber the reported total, the tooltip keeps that total and omits expiry details. A reported zero appears as `0 account reset credits available`.
+
+When credit details are available, the tooltip shows the nearest expiry on the line below the credit count, such as `Next credit expires in 2h 30m · Tomorrow at 00:00`. Credit expiries use the same countdown, local date and 24-hour clock as allowance reset times, and refresh every minute. A `null` expiry means the credit does not expire. When all available credits are known to be non-expiring, the tooltip says `This credit does not expire` or `These credits do not expire`. Missing or invalid expiry times appear as `Next credit expires at an unknown time`.
+
+Partial credit lists, unknown availability or missing expiry times make the nearest expiry uncertain. The tooltip uses `Earliest known credit expires` when a timed expiry is known but other credits could expire sooner. Non-expiring credits do not make expiry information incomplete. If Codex provides only a count, the tooltip omits the expiry. If the reset-credit field is missing or unavailable, the tooltip omits the reset summary. The extension reads these fields from the same usage check. See the [Codex app-server documentation](https://learn.chatgpt.com/docs/app-server#6-rate-limits-chatgpt) for the response fields.
 
 Countdowns and update ages refresh every minute, independently of usage checks.
 
