@@ -38,9 +38,11 @@ function executable() {
   return 'codex';
 }
 
+/** @param {import('vscode').ExtensionContext} context */
 function activate(context) {
   const item = vscode.window.createStatusBarItem('codexUsage', vscode.StatusBarAlignment.Right, 100);
   item.name = 'Codex remaining allowance';
+  /** @type {Map<string, import('vscode').StatusBarItem>} */
   const allowanceItems = new Map();
   let client;
   let refreshTimer;

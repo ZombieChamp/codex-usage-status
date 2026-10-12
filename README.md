@@ -14,7 +14,7 @@ Captured in VS Code with sample usage data and the default warning and critical 
 
 ## Prerequisites
 
-- VS Code 1.85.0 or later.
+- VS Code 1.66.0 or later.
 - A Codex executable, either bundled with the installed OpenAI extension or available as `codex` on your `PATH`. You can also configure an absolute path.
 - Codex signed in with your ChatGPT account, with allowance data available for that account.
 
@@ -72,7 +72,7 @@ A stale value is the result of an earlier successful check. Refresh it before re
 
 ## Development
 
-Use Node.js with support for `node --test` to run the tests, and Python 3 to build a VSIX. The project has no npm dependencies to install.
+Use Node.js 20 or later to run the development checks, and Python 3 to build a VSIX. Run `npm ci` to install the development dependencies.
 
 1. Open this repository in VS Code.
 2. Press **F5** with the **Run Codex Usage Status** launch configuration selected.
@@ -92,13 +92,26 @@ npm run package
 
 It writes `dist/codex-usage-status-<version>.vsix` using the version in `package.json`.
 
-The icon font in `media/gauges.woff` contains 101 gauges, one for each whole percentage from 0% to 100%, and the ChatGPT logo from `media/chatgpt.svg`. To change the icons, install the Python `fonttools` package in a virtual environment and run `python scripts/generate_gauges.py`. This regenerates the font and its icon declarations in `package.json`. Normal packaging does not require FontTools.
+The icon font in `media/gauges.woff` contains 101 gauges, one for each whole percentage from 0% to 100%, and the ChatGPT logo from `media/chatgpt.svg`. To change the icons, activate a virtual environment with Python 3.11 or later. Install the pinned FontTools dependency with `python3 -m pip install -r requirements-dev.txt`, then run `python3 scripts/generate_gauges.py`. This regenerates the font and its icon declarations in `package.json`. Normal packaging does not require FontTools.
 
 With that virtual environment active, run `npm run check:icons` to compare the generated font and icon declarations with the committed files and test the SVG input checks. This command requires FontTools. `npm test` runs the JavaScript tests without it.
 
 The logo SVG must have a `viewBox` with four finite numbers and positive width and height. Numbers can use whitespace or comma separators.
 
 The SVG must contain exactly one direct filled `path`, with an optional `title`. Combine shapes into a single compound path. Resolve overlaps so filled regions and holes follow the nonzero winding rule. The generator rejects multiple paths, groups, transforms, strokes, CSS styling and other SVG elements or attributes. Convert these constructs to the compound path before regenerating the font. The fill colour becomes the status bar item's theme colour.
+
+## VS Code compatibility tests
+
+CI checks the VS Code API, unit tests, and icon assets, then tests the VSIX on the declared minimum and current stable releases. To run the API check and packaged extension tests locally:
+
+```sh
+npm run check:vscode-api
+npm run test:compat
+```
+
+Headless Linux needs Xvfb and the Electron display libraries. With those installed, use `xvfb-run -a npm run test:compat`.
+
+See the [compatibility guide](docs/vscode-compatibility.md) for setup, release options, test coverage and isolation, and the findings behind the minimum VS Code version.
 
 ## Contributing
 

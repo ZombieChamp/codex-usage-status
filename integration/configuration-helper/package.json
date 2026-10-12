@@ -1,0 +1,21 @@
+{
+  "name": "codex-usage-test-helper",
+  "publisher": "CodexUsageTests",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.57.0"
+  },
+  "main": "./main.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:codexUsageTest.applySettings"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "codexUsageTest.applySettings",
+        "title": "Codex Usage Test: Apply Settings"
+      }
+    ]
+  }
+}

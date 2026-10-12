@@ -53,7 +53,7 @@ The [commit validation workflow](workflows/commit-validation.yml) runs on pull r
 
 Target `main`, link the issue, and use the [pull request template](pull_request_template.md). Describe what changed, why, and how you tested it. Include the optional approach section when it helps explain the change. Request a review from the designated [CODEOWNERS](CODEOWNERS).
 
-Run `npm test` before submitting code changes. For interface changes, describe your checks in the Extension Development Host and include screenshots when useful. Update the README when commands, settings, or user-visible behaviour change. The current GitHub Actions workflow validates commit messages only; it does not run the tests or build the VSIX.
+Run `npm test` and `npm run check:vscode-api` before submitting code changes. For interface changes, also run `npm run check:icons` and `npm run test:compat`. Describe any further visual checks. Update the README when commands, settings, or user-visible behaviour change. GitHub Actions checks API compatibility, runs the unit tests, and validates the generated icon assets. It then builds and tests the VSIX on the declared minimum and stable VS Code releases. A separate workflow validates commit messages.
 
 Pull requests are squash-merged into `main`. The squashed commit message must follow the Conventional Commits format described above, summarising the overall change concisely.
 
@@ -77,11 +77,11 @@ Markdown files are exempt from trailing whitespace trimming, as trailing spaces 
 
 ### Prerequisites
 
-- VS Code 1.85.0 or later to run the extension.
-- Node.js with support for `node --test`, and npm to run the package scripts.
-- Python 3, available as `python3`, to build a VSIX.
+- VS Code 1.66.0 or later to run the extension.
+- Node.js 20 or later and npm to run the development scripts.
+- Python 3, available as `python3`, to build a VSIX. Icon checks require Python 3.11 or later.
 
-Clone your fork and create a branch from `main` using the naming convention above. Run the commands below from the repository root.
+Clone your fork and create a branch from `main` using the naming convention above. Run `npm ci` from the repository root to install development dependencies, then run the commands below.
 
 ### Run the extension
 
@@ -109,9 +109,28 @@ node --test test/client.test.js
 
 Add regression coverage for changes to client behaviour or allowance parsing in the corresponding file under `test/`.
 
-For icon changes, install `fonttools` in a Python virtual environment and activate it, then run:
+Check the JavaScript against the declared minimum VS Code API:
 
 ```sh
+npm run check:vscode-api
+```
+
+When changing `engines.vscode`, pin `@types/vscode` to the same minimum release, update the lockfile, and update the documented prerequisites.
+
+Keep `@types/node` compatible with the Node.js version bundled by the minimum VS Code release. See the [API and runtime checks](../docs/vscode-compatibility.md#api-and-runtime-checks) for the baseline and compiler regression coverage.
+
+Run the packaged extension against the minimum and stable VS Code releases on Linux or macOS:
+
+```sh
+npm run test:compat
+```
+
+The tests use disposable editor profiles and a fake Codex server. See the [compatibility guide](../docs/vscode-compatibility.md#run-the-checks) for display requirements, single-release tests, probes of older releases, and Windows options.
+
+For icon changes, activate a virtual environment with Python 3.11 or later, then run:
+
+```sh
+python3 -m pip install -r requirements-dev.txt
 npm run check:icons
 ```
 
@@ -125,7 +144,7 @@ npm run package
 
 The command writes `dist/codex-usage-status-<version>.vsix`, with the version from `package.json`. Git ignores `dist/`.
 
-To check the package, run **Extensions: Install from VSIX...** in VS Code and select the generated file. Check that the extension loads and displays usage. Record any manual checks you could not complete in the pull request.
+To check the package in a disposable VS Code profile, run `npm run test:compat`. The command builds its own temporary VSIX, installs it in an isolated extensions directory, and checks the rendered status bar and tooltips. Record any further manual checks in the pull request.
 
 ### Repository layout
 
@@ -137,6 +156,13 @@ To check the package, run **Extensions: Install from VSIX...** in VS Code and se
 - `test/client.test.js`, `test/usage.test.js` and `test/time.test.js` cover the client, allowance parsing and time formatting.
 - `test/credits.test.js` covers reset-credit availability, expiry and incomplete account data.
 - `test/icons.test.js` checks icon registration. `test/test_icons.py` checks generated assets and the SVG input format with FontTools.
+- `test/compatibility.test.js` checks API and runtime definitions, release arguments, package engine overrides, startup diagnostics, and cleanup when a worker blocks during launch.
+- `test/integration-files.test.js` checks atomic JSON publication during concurrent reads and cleanup after a failed publication.
+- `integration/vscode.js` tests the packaged extension in downloaded VS Code instances. `integration/fake-codex.js` supplies local test responses.
+- `integration/configuration-helper/` contains the helper extension and the shared atomic JSON writer. The runner copies the helper into each temporary profile.
+- `scripts/vscode-compatibility.js` selects releases and starts disposable test runs.
+- `scripts/compatibility-processes.js` owns the worker and VS Code processes, handles application commands, and waits for shutdown before removing test directories.
+- `scripts/check-vscode-api.js` checks the pinned API version and runs the JavaScript type check.
 - `scripts/package.py` builds the VSIX from an explicit file list. Update that list if you add files the extension needs at runtime.
 - `package.json` declares commands, settings, extension metadata, and development scripts.
 

@@ -3,7 +3,7 @@
   "displayName": "Codex Usage Status",
   "icon": "media/icon.png",
   "description": "Show remaining Codex allowance and reset times in the status bar.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "ZombieChamp",
   "license": "GPL-3.0-only",
   "repository": {
@@ -11,7 +11,7 @@
     "url": "https://github.com/ZombieChamp/codex-usage-status.git"
   },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.66.0"
   },
   "categories": [
     "Other"
@@ -25,6 +25,8 @@
   "main": "./src/extension.js",
   "scripts": {
     "test": "node --test",
+    "check:vscode-api": "node scripts/check-vscode-api.js",
+    "test:compat": "node scripts/vscode-compatibility.js",
     "check:icons": "python3 -m unittest discover -s test -p test_icons.py",
     "package": "python3 scripts/package.py"
   },
@@ -796,5 +798,13 @@
         }
       }
     }
+  },
+  "devDependencies": {
+    "@types/node": "16.11.7",
+    "@types/vscode": "1.66.0",
+    "@vscode/test-electron": "2.5.2",
+    "playwright-core": "1.60.0",
+    "semver": "7.8.5",
+    "typescript": "5.9.3"
   }
 }

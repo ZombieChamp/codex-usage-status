@@ -33,6 +33,10 @@ function parseMessage(line) {
 }
 
 class CodexClient {
+  /**
+   * @param {string} executable
+   * @param {{args?: string[], timeout?: number, onUpdate?: (params: unknown) => void}} [options]
+   */
   constructor(executable, {
     args = ['app-server'],
     timeout = 15000,

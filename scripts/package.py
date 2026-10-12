@@ -1,14 +1,23 @@
 """Build a VSIX using the Python standard library."""
 
+import argparse
 import json
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
-from xml.sax.saxutils import escape
+from xml.sax.saxutils import escape, quoteattr
 
 root = Path(__file__).resolve().parent.parent
-package = json.loads((root / "package.json").read_text())
-out = root / "dist"
-out.mkdir(exist_ok=True)
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--out-dir", type=Path, default=root / "dist")
+parser.add_argument("--vscode-engine", help="Override engines.vscode in the generated VSIX only.")
+args = parser.parse_args()
+package_contents = (root / "package.json").read_text()
+package = json.loads(package_contents)
+if args.vscode_engine is not None:
+    package["engines"]["vscode"] = args.vscode_engine
+    package_contents = json.dumps(package, indent=2) + "\n"
+out = args.out_dir
+out.mkdir(parents=True, exist_ok=True)
 target = out / f'{package["name"]}-{package["version"]}.vsix'
 
 manifest = f'''<?xml version="1.0" encoding="utf-8"?>
@@ -21,7 +30,7 @@ manifest = f'''<?xml version="1.0" encoding="utf-8"?>
     <Tags>codex,usage,statusbar</Tags>
     <Categories>Other</Categories>
     <Properties>
-      <Property Id="Microsoft.VisualStudio.Code.Engine" Value="{package['engines']['vscode']}"/>
+      <Property Id="Microsoft.VisualStudio.Code.Engine" Value={quoteattr(package['engines']['vscode'])}/>
       <Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="ui"/>
     </Properties>
   </Metadata>
@@ -51,8 +60,8 @@ types = '''<?xml version="1.0" encoding="utf-8"?>
 with ZipFile(target, "w", ZIP_DEFLATED) as archive:
     archive.writestr("extension.vsixmanifest", manifest)
     archive.writestr("[Content_Types].xml", types)
+    archive.writestr("extension/package.json", package_contents)
     for name in [
-        "package.json",
         "README.md",
         "LICENCE",
         package["icon"],
